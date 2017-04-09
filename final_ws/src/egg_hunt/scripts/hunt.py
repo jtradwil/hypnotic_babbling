@@ -6,6 +6,27 @@ import smach_ros
 import cv2
 import numpy as np
 import os
+from sensor_msgs.msg import Image
+from ar_track_alvar_msgs.msg import AlvarMarkers
+
+#global variables
+rabbit_one=0
+rabbit_two=0
+rabbit_three=0
+
+one_x=0
+one_y=0
+one_z=0
+
+two_x=0
+two_y=0
+two_z=0
+
+three_x=0
+three_y=0
+three_z=0
+
+target=0
 
 # define state Map
 class Map(smach.State):
@@ -21,9 +42,26 @@ class Map(smach.State):
 class Explore(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['outcome1'])
+        self.ar_id_sb = rospy.Subscriber('/ar_pose_marker', AlvarMarkers, self.marker_callback)
 
+    def marker_callback(self,data):
+        global rabbit_one,rabbit_two, rabbit_three, one_x, one_y, one_z, two_x, two_y, two_z, three_x, three_y, three_z
+	if len(data.markers)>0:	#if there is a alvar marker in the image
+            if (data.markers[0].id == 1): #if the marker is one, set true and x, y, and z
+		rabbit_one=1
+
+            if (data.markers[0].id == 2): #if the marker is two, set true and x, y, and z
+		rabbit_two=1
+
+            if (data.markers[0].id == 3): #if the marker is three, set true and x, y, and z
+		rabbit_three=1
+           
     def execute(self, userdata):
         rospy.loginfo('Executing state EXPLORE')
+        while((rabbit_one and rabbit_two and rabbit_three)!=1):	#loop until all three rabbits have been found
+            #Explore functionality
+	    1+1            
+
         return 'outcome1'
 
 
@@ -41,9 +79,18 @@ class RtoS(smach.State):
 class WforT(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['outcome1'])
+        self.ar_id_sb = rospy.Subscriber('/ar_pose_marker', AlvarMarkers, self.marker_callback)
+
+    def marker_callback(self,data):
+        global target
+	if len(data.markers)>0:	#if there is a alvar marker in the image
+	    target=data.markers[0].id
 
     def execute(self, userdata):
         rospy.loginfo('Executing state WAIT FOR TARGET')
+	while (target==0):
+	    1+1
+        print target
         return 'outcome1'
 
 
@@ -64,59 +111,6 @@ class CntEggs(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo('Executing state COUNT EGGS')
-        
-	cap = cv2.VideoCapture(0)
-	ret, image = cap.read()
-    	hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-
-        pinkLower = np.array([165, 127, 178], np.uint8)
-    	pinkUpper = np.array([175, 166, 255], np.uint8)
-    	maskPink = cv2.inRange(hsv, pinkLower, pinkUpper)
-    	maskPink = cv2.erode(maskPink, None, iterations=2)
-    	maskPink = cv2.dilate(maskPink, None, iterations=8)
-    	contoursPink, hierarchy = cv2.findContours(maskPink,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    	print(str(len(contoursPink))+" Pink Eggs")
-
-    	yellowLower = np.array([22, 102, 224], np.uint8)
-    	yellowUpper = np.array([30, 153, 255], np.uint8)
-    	maskYellow = cv2.inRange(hsv, yellowLower, yellowUpper)
-    	maskYellow = cv2.erode(maskYellow, None, iterations=2)
-    	maskYellow = cv2.dilate(maskYellow, None, iterations=8)
-    	contoursYellow, hierarchy = cv2.findContours(maskYellow,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    	print(str(len(contoursYellow))+" Yellow Eggs")
-
-    	greenLower = np.array([82, 153, 114], np.uint8)
-    	greenUpper = np.array([95, 217, 204], np.uint8)
-    	maskGreen = cv2.inRange(hsv, greenLower, greenUpper)
-    	maskGreen = cv2.erode(maskGreen, None, iterations=2)
-    	maskGreen = cv2.dilate(maskGreen, None, iterations=8)
-    	contoursGreen, hierarchy = cv2.findContours(maskGreen,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    	print(str(len(contoursGreen))+" Green Eggs")
-
-    	blueLower = np.array([100, 204, 242], np.uint8)
-    	blueUpper = np.array([110, 255, 255], np.uint8)
-    	maskBlue = cv2.inRange(hsv, blueLower, blueUpper)
-    	maskBlue = cv2.erode(maskBlue, None, iterations=2)
-    	maskBlue = cv2.dilate(maskBlue, None, iterations=8)
-    	contoursBlue, hierarchy = cv2.findContours(maskBlue,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    	print(str(len(contoursBlue))+" Blue Eggs")
-
-    	orangeLower = np.array([10, 153, 229], np.uint8)
-    	orangeUpper = np.array([14, 242, 255], np.uint8)
-    	maskOrange = cv2.inRange(hsv, orangeLower, orangeUpper)
-    	maskOrange = cv2.erode(maskOrange, None, iterations=2)
-    	maskOrange = cv2.dilate(maskOrange, None, iterations=8)
-    	contoursOrange, hierarchy = cv2.findContours(maskOrange,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    	print(str(len(contoursOrange))+" Orange Eggs")
-
-    	purpleLower = np.array([120, 127, 191], np.uint8)
-    	purpleUpper = np.array([128, 153, 255], np.uint8)
-    	maskPurple = cv2.inRange(hsv, purpleLower, purpleUpper)
-    	maskPurple = cv2.erode(maskPurple, None, iterations=2)
-    	maskPurple = cv2.dilate(maskPurple, None, iterations=8)
-    	contoursPurple, hierarchy = cv2.findContours(maskPurple,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    	print(str(len(contoursPurple))+" Purple Eggs")
-
         return 'outcome1'
 
 
