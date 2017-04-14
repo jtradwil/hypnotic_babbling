@@ -1,0 +1,5 @@
+<launch>
+    <node name="sicklms" pkg="sicktoolbox_wrapper" type="sicklms" args="_port:=/dev/ttyS0 _baud:=38400  _frame_id:=lms291_data"/>
+
+    <node pkg="good_jackal" name="joy_start"  type="joy_start.py" output="screen" required="true" args="hypnotic_babbling explore.py"/>
+</launch>
