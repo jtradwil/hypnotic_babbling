@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import rospy
 import smach
 import smach_ros
@@ -13,29 +12,52 @@ from eggs import avg_size
 from eggs import crop_height
 import time
 import cv_bridge
-from tf.transformations import euler_from_quaternion
-from geometry_msgs.msg import Quaternion
+from tf import TransformListener
+from geometry_msgs.msg import PoseStamped
+import tf
+import math
 
 #global variables
 rabbit_one=0
 rabbit_two=0
 rabbit_three=0
 
-one_x=0
-one_y=0
-one_z=0
-
-two_x=0
-two_y=0
-two_z=0
-
-three_x=0
-three_y=0
-three_z=0
+rabbit_one_pose = PoseStamped()
+rabbit_two_pose = PoseStamped()
+rabbit_three_pose = PoseStamped()
 
 target=0
 
 eggs_counted=0
+
+def cvt_pose(pose):
+    quaternion = (
+    pose.pose.orientation.x,
+    pose.pose.orientation.y,
+    pose.pose.orientation.z,
+    pose.pose.orientation.w)
+
+    euler = tf.transformations.euler_from_quaternion(quaternion)
+    yaw=euler[2]
+    x=math.sin(yaw)+pose.pose.position.x
+    y=math.cos(yaw)+pose.pose.position.y
+
+    if (yaw<3.14):    
+	new_yaw=yaw+3.14
+    else:
+	new_yaw=yaw-3.14
+    
+    ret_pose=pose
+    ret_pose.pose.position.x=x
+    ret_pose.pose.position.y=y
+    ret_pose.pose.position.z=0
+    quaternion = tf.transformations.quaternion_from_euler(0, 0, new_yaw)
+    ret_pose.pose.orientation.x=quaternion[0]
+    ret_pose.pose.orientation.y=quaternion[1]
+    ret_pose.pose.orientation.z=quaternion[2]
+    ret_pose.pose.orientation.w=quaternion[3]
+    return ret_pose
+
 
 # define state Map
 class Map(smach.State):
@@ -51,26 +73,46 @@ class Map(smach.State):
 class Explore(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['outcome1'])
+        self.tfl=TransformListener()
 
     def marker_callback(self,data):
-        global rabbit_one,rabbit_two, rabbit_three, one_x, one_y, one_z, two_x, two_y, two_z, three_x, three_y, three_z
+        global rabbit_one,rabbit_two, rabbit_three, rabbit_one_pose, rabbit_two_pose, rabbit_three_pose
 	if len(data.markers)>0:	#if there is a alvar marker in the image
-            if (data.markers[0].id == 1): #if the marker is one, set true and x, y, and z
+            
+            tag_pose = PoseStamped()
+            tag_pose.header=data.markers[0].header
+            tag_pose.pose=data.markers[0].pose.pose
+            success=False
+	    while not success:
+		try:
+ 		    tag_pose=self.tfl.transformPose("/front_mount", tag_pose)
+		    success=True
+		except Exception:
+		    time.sleep(0.01)
+            
+            if (data.markers[0].id == 1)and(rabbit_one==0): #if the marker is one, set true and x, y, and z
 		rabbit_one=1
+		rabbit_one_pose=tag_pose
 
-            if (data.markers[0].id == 2): #if the marker is two, set true and x, y, and z
+            if (data.markers[0].id == 2)and(rabbit_two==0): #if the marker is two, set true and x, y, and z
 		rabbit_two=1
+		rabbit_two_pose=tag_pose
 
-            if (data.markers[0].id == 3): #if the marker is three, set true and x, y, and z
+            if (data.markers[0].id == 3)and(rabbit_three==0): #if the marker is three, set true and x, y, and z
 		rabbit_three=1
+		rabbit_three_pose=tag_pose
            
     def execute(self, userdata):
+        global rabbit_one,rabbit_two, rabbit_three, rabbit_one_pose, rabbit_two_pose, rabbit_three_pose
         rospy.loginfo('Executing state EXPLORE')
         self.ar_exp_sb = rospy.Subscriber('/ar_pose_marker', AlvarMarkers, self.marker_callback)
         while((rabbit_one and rabbit_two and rabbit_three)!=1):	#loop until all three rabbits have been found
             #Explore functionality
 	    1+1            
         self.ar_exp_sb.unregister()
+        rabbit_one_pose=cvt_pose(rabbit_one_pose)
+	rabbit_two_pose=cvt_pose(rabbit_two_pose)
+	rabbit_three_pose=cvt_pose(rabbit_three_pose)
         return 'outcome1'
 
 
@@ -111,7 +153,7 @@ class NtoT(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo('Executing state NAVIGATE TO TARGET')
-        time.sleep(60)
+        #time.sleep(60)
         return 'outcome1'
 
 
