@@ -14,7 +14,7 @@ import roslaunch
 import os
 import math
 
-# Global variables for random bounds
+# Global variables for random boundss
 
 
 cmd_x = 0

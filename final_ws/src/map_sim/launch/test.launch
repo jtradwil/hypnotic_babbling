@@ -33,7 +33,7 @@
 
   <!-- Spawn Jackal -->
   <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model"
-	      args="-urdf -model jackal_5900 -param robot_description -x 8.5 -y 0 -z 1.0 -R 0 -P 0 -Y 1.5707963" />
+	      args="-urdf -model jackal_5900 -param robot_description -x 5 -y -5 -z 1.0 -R 0 -P 0 -Y -1.5707" />
 	   
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
 
@@ -63,7 +63,7 @@
     <!-- Process 1 out of every this many scans (set it to a higher number to skip more scans)  -->
     <param name="throttle_scans" value="1"/>
 
-    <param name="map_update_interval" value="2.0"/> <!-- default: 5.0 -->
+    <param name="map_update_interval" value="0.5"/> <!-- default: 5.0 -->
 
     <!-- The maximum usable range of the laser. A beam is cropped to this value.  -->
     <param name="maxUrange" value="15"/>
@@ -119,6 +119,6 @@
   <arg name="rviz_config" value="gmapping" />
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find map_sim)/rviz/mapping.rviz" />
   
-  <!-- node pkg="map_sim" name="explore2" type="explore2.py" required="true" output="screen"/ -->
+  <node pkg="map_sim" name="explore2" type="explore3.py" required="true" output="screen"/>
   
 </launch>
