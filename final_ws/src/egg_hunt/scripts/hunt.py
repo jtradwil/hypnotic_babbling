@@ -63,9 +63,42 @@ def cvt_pose(pose):
 class Map(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['outcome1'])
+        self.tfl=TransformListener()	#create a tf listenter
 
+    def map_marker_callback(self,data):
+        global rabbit_one,rabbit_two, rabbit_three, rabbit_one_pose, rabbit_two_pose, rabbit_three_pose
+	if len(data.markers)>0:	#if there is a alvar marker in the image
+            
+            tag_pose = PoseStamped()	#manipulate the alvar message into a pose
+            tag_pose.header=data.markers[0].header
+            tag_pose.pose=data.markers[0].pose.pose
+            success=False
+	    while not success:
+		try:
+ 		    tag_pose=self.tfl.transformPose("/map", tag_pose)	#try to transform
+		    success=True
+		except Exception:
+		    time.sleep(0.01)
+            
+            if (data.markers[0].id == 1)and(rabbit_one==0): #if the marker is one, set true and x, y, and z
+		rabbit_one=1
+		rabbit_one_pose=tag_pose	#save the pose of the rabbit in the map frame
+
+            if (data.markers[0].id == 2)and(rabbit_two==0): #if the marker is two, set true and x, y, and z
+		rabbit_two=1
+		rabbit_two_pose=tag_pose
+
+            if (data.markers[0].id == 3)and(rabbit_three==0): #if the marker is three, set true and x, y, and z
+		rabbit_three=1
+		rabbit_three_pose=tag_pose
+           
     def execute(self, userdata):
         rospy.loginfo('Executing state MAP')
+        self.ar_map_sb = rospy.Subscriber('/ar_pose_marker', AlvarMarkers, self.map_marker_callback)
+	####
+	#Launch nodes and wait until complete
+	####
+        self.ar_map_sb.unregister()
         return 'outcome1'
 
 
@@ -75,18 +108,18 @@ class Explore(smach.State):
         smach.State.__init__(self, outcomes=['outcome1'])
         self.tfl=TransformListener()
 
-    def marker_callback(self,data):
+    def ex_marker_callback(self,data):
         global rabbit_one,rabbit_two, rabbit_three, rabbit_one_pose, rabbit_two_pose, rabbit_three_pose
 	if len(data.markers)>0:	#if there is a alvar marker in the image
             
-            tag_pose = PoseStamped()
+            tag_pose = PoseStamped()	#make a pose from the alvar message
             tag_pose.header=data.markers[0].header
             tag_pose.pose=data.markers[0].pose.pose
             success=False
 	    while not success:
 		try:
- 		    tag_pose=self.tfl.transformPose("/front_mount", tag_pose)
-		    success=True
+ 		    tag_pose=self.tfl.transformPose("/map", tag_pose)	#tranform into the map frame
+		    success=True	
 		except Exception:
 		    time.sleep(0.01)
             
@@ -105,9 +138,12 @@ class Explore(smach.State):
     def execute(self, userdata):
         global rabbit_one,rabbit_two, rabbit_three, rabbit_one_pose, rabbit_two_pose, rabbit_three_pose
         rospy.loginfo('Executing state EXPLORE')
-        self.ar_exp_sb = rospy.Subscriber('/ar_pose_marker', AlvarMarkers, self.marker_callback)
+        self.ar_exp_sb = rospy.Subscriber('/ar_pose_marker', AlvarMarkers, self.ex_marker_callback)
+	###delay until all rabbits are identified###
         while((rabbit_one and rabbit_two and rabbit_three)!=1):	#loop until all three rabbits have been found
-            #Explore functionality
+        ####
+	#Explore until all of the rabbits are found
+	####
 	    1+1            
         self.ar_exp_sb.unregister()
         rabbit_one_pose=cvt_pose(rabbit_one_pose)
@@ -123,6 +159,7 @@ class RtoS(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo('Executing state RETURN TO START')
+	time.sleep(15)
         return 'outcome1'
 
 
@@ -131,18 +168,20 @@ class WforT(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['outcome1'])
         
-    def marker_callback(self,data):
+    def wt_marker_callback(self,data):
         global target
 	if len(data.markers)>0:	#if there is a alvar marker in the image
-	    target=data.markers[0].id
+	    target=data.markers[0].id	#set the target to the id of the tag in the frame
 
     def execute(self, userdata):
+	global target
         rospy.loginfo('Executing state WAIT FOR TARGET')
-        self.ar_id_sb = rospy.Subscriber('/ar_pose_marker', AlvarMarkers, self.marker_callback)
-	while (target==0):
+        target=0	#clear target
+        self.ar_id_sb = rospy.Subscriber('/ar_pose_marker', AlvarMarkers, self.wt_marker_callback)	#subscribe
+	while (target==0):	#wait until the target is set
 	    1+1
-        print target
-        self.ar_id_sb.unregister()
+        	
+        self.ar_id_sb.unregister()	#unsubscribe
         return 'outcome1'
 
 
@@ -153,7 +192,7 @@ class NtoT(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo('Executing state NAVIGATE TO TARGET')
-        #time.sleep(60)
+        time.sleep(15)
         return 'outcome1'
 
 
@@ -165,15 +204,15 @@ class CntEggs(smach.State):
         
     def image_callback(self, msg):
         global eggs_counted
-        image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        print find(crop_height(image),avg_size(crop_height(image)))
-        eggs_counted=1
-        self.image_sb.unregister()
+        image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")	#convert image
+        print find(crop_height(image),avg_size(crop_height(image)))	#count the eggs
+        eggs_counted=1	#set flag
+        self.image_sb.unregister()	#unsubscribe
 
     def execute(self, userdata):
         rospy.loginfo('Executing state COUNT EGGS')
-        self.image_sb = rospy.Subscriber('/usb_cam/image_raw', Image, self.image_callback)
-        while (eggs_counted==0):
+        self.image_sb = rospy.Subscriber('/usb_cam/image_raw', Image, self.image_callback) #subscribe to usb_cam topic
+        while (eggs_counted==0):	#loop until eggs have been counted
 	    1+1
         return 'outcome1'
 
