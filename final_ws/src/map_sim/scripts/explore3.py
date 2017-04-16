@@ -32,7 +32,7 @@ class explorer(object):
 
     # Run setpoints
     wall_distance = 1
-    max_speed = 1
+    max_speed = 0.75
     
     # Laser Information
     angle_min = 0
