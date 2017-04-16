@@ -102,7 +102,7 @@
       
       <model name='left_wall'>
         <link name='link'>
-          <pose>0 -10 0.5 0 0 0</pose>
+          <pose>-10 0 0.5 0 0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -112,7 +112,7 @@
       
       <model name='right_wall'>
         <link name='link'>
-          <pose>0 10 0.5 0 0 0</pose>
+          <pose>10 0 0.5 0 0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -121,7 +121,7 @@
       
       <model name='top_wall'>
         <link name='link'>
-          <pose>10 0 0.5 0 0 0</pose>
+          <pose>0 10 0.5 0 0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -130,7 +130,7 @@
       
       <model name='bottom_wall'>
         <link name='link'>
-          <pose>-10 0 0.5 0 0 0</pose>
+          <pose>0 -10 0.5 0 0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -139,7 +139,7 @@
       
       <model name='left_basket'>
         <link name='link'>
-          <pose>0 -8.5 0 0 0 0</pose>
+          <pose>-6.5 0 0 0 0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -148,7 +148,7 @@
       
       <model name='right_basket'>
         <link name='link'>
-          <pose>0 8.5 0 0 0 0</pose>
+          <pose>6.5 0 0 0 0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -157,7 +157,7 @@
       
       <model name='top_basket'>
         <link name='link'>
-          <pose>8.5 0 0 0 0 0</pose>
+          <pose>0 6.5 0 0 0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -166,7 +166,7 @@
       
       <model name='bottom_basket'>
         <link name='link'>
-          <pose>-8.5 0 0 0 0 0</pose>
+          <pose>0 -6.5 0 0 0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -209,7 +209,7 @@
         <collision name='collision'>
           <geometry>
             <box>
-              <size>20 1 1</size>
+              <size>1 20 1</size>
             </box>
           </geometry>
           <max_contacts>10</max_contacts>
@@ -227,7 +227,7 @@
         <visual name='visual'>
           <geometry>
             <box>
-              <size>20 1 1</size>
+              <size>1 20 1</size>
             </box>
           </geometry>
           
@@ -269,7 +269,7 @@
         <collision name='collision'>
           <geometry>
             <box>
-              <size>20 1 1</size>
+              <size>1 20 1</size>
             </box>
           </geometry>
           <max_contacts>10</max_contacts>
@@ -287,7 +287,7 @@
         <visual name='visual'>
           <geometry>
             <box>
-              <size>20 1 1</size>
+              <size>1 20 1</size>
             </box>
           </geometry>
           
@@ -329,7 +329,7 @@
         <collision name='collision'>
           <geometry>
             <box>
-              <size>1 20 1</size>
+              <size>20 1 1</size>
             </box>
           </geometry>
           <max_contacts>10</max_contacts>
@@ -347,7 +347,7 @@
         <visual name='visual'>
           <geometry>
             <box>
-              <size>1 20 1</size>
+              <size>20 1 1</size>
             </box>
           </geometry>
           
@@ -389,7 +389,7 @@
         <collision name='collision'>
           <geometry>
             <box>
-              <size>1 20 1</size>
+              <size>20 1 1</size>
             </box>
           </geometry>
           <max_contacts>10</max_contacts>
@@ -407,7 +407,7 @@
         <visual name='visual'>
           <geometry>
             <box>
-              <size>1 20 1</size>
+              <size>20 1 1</size>
             </box>
           </geometry>
           

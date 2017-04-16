@@ -14,6 +14,7 @@ import sys
 import rospkg
 import rosparam
 import cv2
+import copy
 
 class explorer(object):
     # Global variables for random bounds
@@ -22,6 +23,8 @@ class explorer(object):
     linear_acc  =  1.0 / run_rate
     angular_acc =  1.0 / run_rate
     angle_threshold = 60 * 3.14159 / 180
+    bunnie_delta = 5
+    bunnie_radius = 13
     
     # Frame definitions
     map_frame = "map"
@@ -29,7 +32,7 @@ class explorer(object):
 
     # Run setpoints
     wall_distance = 1
-    max_speed = 0.75
+    max_speed = 1
     
     # Laser Information
     angle_min = 0
@@ -127,7 +130,7 @@ class explorer(object):
         
             self._update_cmd(linear, angular)
             self._publish_start_tf(start_trans, start_rot)
-            rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f', self.stage,linear, angular)
+            #rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f', self.stage,linear, angular)
             self.rate.sleep()
             
         
@@ -278,8 +281,6 @@ class explorer(object):
 
     def _open_cv_map(self):
         (origin,resolution) = self._get_map_params()
-        
-        
     
         img = cv2.imread(self.map_path + ".pgm",0)
         
@@ -289,7 +290,47 @@ class explorer(object):
         
         cv2.circle(color, (abs(int(origin[0] / resolution)), height - abs(int(origin[1] / resolution))), 5, (0, 0, 255), 2)
         
+        
+        threshing = cv2.inRange(img,0,1)
+        
+        dilateElement = np.ones((2,2),np.uint8)
+        threshing = cv2.dilate(threshing, dilateElement, iterations = 2)
+        
+        countours = copy.copy(threshing)
+        
+        cnts = cv2.findContours(countours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[-2]
+        cv2.drawContours(color, cnts, -1, (0,255,0), 3)
+        
+        bunnies = []
+        
+        for cont in cnts:
+            ((x, y), radius) = cv2.minEnclosingCircle(cont)
+            
+            circle_area = math.pi * (radius ** 2)
+            contour_area = cv2.contourArea(cont)
+            
+            if((radius < (self.bunnie_radius + self.bunnie_delta)) and (radius > (self.bunnie_radius - self.bunnie_delta))):
+                if(len(bunnies) > 0):
+                    prev_bunnie = 0
+                    for target in bunnies:
+                        if( (x < (target[0] + self.bunnie_delta)) and (x > (target[0] - self.bunnie_delta)) and
+                            (y < (target[1] + self.bunnie_delta)) and (y > (target[1] - self.bunnie_delta)) ):
+                            rospy.loginfo('\tMatch at: X: %d, Y: %d, R: %d',int(x), int(y), int(radius))
+                            prev_bunnie = 1
+                        
+                    if(prev_bunnie == 0):
+                        rospy.loginfo('\tNew at: X: %d, Y: %d, R: %d',int(x), int(y), int(radius))
+                        bunnies.append([x,y,radius])
+                        cv2.circle(color, (int(x), int(y)), int(radius), (255, 0, 0), 2)
+                            
+                else:
+                    rospy.loginfo('\tFirst at: X: %d, Y: %d, R: %d',int(x), int(y), int(radius))
+                    bunnies.append([x,y,radius])
+                    cv2.circle(color, (int(x), int(y)), int(radius), (255, 0, 0), 2)
+        
+        cv2.imshow('map', cv2.resize(img, (0,0), fx=0.5, fy=0.5))
         cv2.imshow('Result', cv2.resize(color, (0,0), fx=0.5, fy=0.5))
+        cv2.imshow('Threshold', cv2.resize(threshing, (0,0), fx=0.5, fy=0.5))
         
         cv2.waitKey(30)
 

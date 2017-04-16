@@ -26,6 +26,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 ${PI/1}" />
       <geometry>
+        <!-- sphere radius="0.05" / -->
         <mesh filename="package://map_sim/meshes/lms291_asm.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="blue"/>
@@ -34,7 +35,8 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <box size="0.155 0.156 0.185"/>
+        <sphere radius="0.05" />
+        <!-- box size="0.155 0.156 0.185"/ -->
       </geometry>
     </collision>
   </link>
@@ -85,8 +87,8 @@
   <gazebo reference="lms291">
     <material>Gazebo/Blue</material>
     <turnGravityOff>true</turnGravityOff>
-    <sensor type="gpu_ray" name="lms291_sensor">
-      <pose>0 0 0 0 0 0</pose>
+    <sensor type="ray" name="laser">
+      <pose>0 0 5 0 0 0</pose>
       <visualize>true</visualize>
       <update_rate>40</update_rate>
       <ray>
@@ -109,8 +111,8 @@
           <stddev>0.01</stddev>
         </noise>
       </ray>
-      <plugin name="gazebo_ros_laser" filename="libgazebo_ros_gpu_laser.so">
-        <topicName>scan</topicName>
+      <plugin name="laser_plug" filename="libgazebo_ros_laser.so">
+        <topicName>/scan</topicName>
         <frameName>lms291</frameName>
       </plugin>
     </sensor>

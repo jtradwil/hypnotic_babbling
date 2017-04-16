@@ -14,11 +14,12 @@ class ControlledStart(object):
 
         self.proc = None
         self.start = False
+        self.started = True
 
         rospy.init_node("controller_starter", anonymous=False)
         sub = rospy.Subscriber("/bluetooth_teleop/joy", Joy, self._joy_callback)
 
-        while not rospy.is_shutdown():
+        while (not(rospy.is_shutdown()) and self.started):
             if self.start:
                 self.proc = self.launch_api.launch(self.node)
                 self.start = False
@@ -34,6 +35,7 @@ class ControlledStart(object):
             rospy.loginfo("Process stopped")
             self.proc.stop()
             self.proc = None
+            self.started = False
 
 if __name__ == "__main__":
     try:
