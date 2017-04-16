@@ -37,7 +37,10 @@ def crop_height(image):
             egg_y=y
             egg_w=w
             egg_h=h
-    cropped=image[egg_y-float(0.2*egg_h):egg_y+egg_h+float(0.2*egg_h), 0:width]
+    if (egg_h>0):
+        cropped=image[egg_y-float(0.2*egg_h):egg_y+egg_h+float(0.2*egg_h), 0:width]
+    else:
+	cropped=image
     return cropped
 
 def avg_size(image):
@@ -82,11 +85,14 @@ def avg_size(image):
         sizes.append(w*h)
     sizes.sort()
     new_sizes=[]
-    median=sizes[len(sizes)/2]
-    for number in sizes:
-	if (number>median-(0.6*median))and (number<median+(0.6*median)):
-	    new_sizes.append(number)
-    avg_size=sum(new_sizes)/len(new_sizes)	
+    if len(sizes)>0:
+    	median=sizes[len(sizes)/2]
+    	for number in sizes:
+            if (number>median-(0.6*median))and (number<median+(0.6*median)):
+	        new_sizes.append(number)
+        avg_size=sum(new_sizes)/len(new_sizes)	
+    else:
+        avg_size=0
     
     return avg_size
 
@@ -155,9 +161,4 @@ def find(image, avg):
 	    purple=purple+1
 
     return [pink, yellow, green, blue, orange, purple]
-
-#image=cv2.imread("third/blue.jpg")
-
-#img =crop_height(image)
-#print find(img,avg_size(img))
 
