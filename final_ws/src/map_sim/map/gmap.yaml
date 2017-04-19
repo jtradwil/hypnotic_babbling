@@ -1,0 +1,7 @@
+image: /home/ros/EE5900_Repos/hypnotic_babbling/final_ws/src/map_sim/map/gmap.pgm
+resolution: 0.025000
+origin: [-1.000000, -13.000000, 0.000000]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+
