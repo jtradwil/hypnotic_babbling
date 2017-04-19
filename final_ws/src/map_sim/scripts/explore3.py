@@ -2,7 +2,7 @@
 
 # imports
 import rospy
-from geometry_msgs.msg import Twist, Vector3
+from geometry_msgs.msg import Twist, Vector3, Point, PoseWithCovarianceStamped, Quaternion
 from sensor_msgs.msg import LaserScan
 import numpy as np
 import math
@@ -21,17 +21,17 @@ class explorer(object):
     blind_threshold = 3.5
     run_rate = 50
     linear_acc  =  1.0 / run_rate
-    angular_acc =  1.0 / run_rate
+    angular_acc =  10.0 / run_rate
     angle_threshold = 60 * 3.14159 / 180
-    bunnie_delta = 5
-    bunnie_radius = 13
+    bunnie_delta = 3
+    bunnie_radius = 7
     
     # Frame definitions
     map_frame = "map"
     start_frame = "start_point"
 
     # Run setpoints
-    wall_distance = 1
+    wall_distance = 0.75
     max_speed = 0.75
     
     # Laser Information
@@ -72,6 +72,9 @@ class explorer(object):
         
         
     def _run_states(self):
+    
+        run = 1
+    
         linear = 0
         angular = 0
         
@@ -79,8 +82,14 @@ class explorer(object):
         start_zone = 1
         start_trans = np.zeros(3)
         start_rot = np.zeros(4)
+        start_rot[3] = 1
+        
+        distance = 0
     
-        while not(rospy.is_shutdown()):
+        while not(rospy.is_shutdown()) and (run == 1):
+            
+        
+        
             if(self.stage == 0):
                 (success,start_trans, start_rot) = self._get_transform("map", "base_link")
                 if(self.laser_valid == 1):
@@ -88,10 +97,13 @@ class explorer(object):
                     if(self.dist_min > (self.wall_distance + 0.25)):
                         linear = 0.5
                         angular = 0.125
-                    else:
+                    elif(success == 1):
                         linear = 0
                         angular = 0
                         self.stage = self.stage + 1
+                    else:
+                        linear = 0
+                        angular = 0
                         
             elif(self.stage == 1):
                 linear, angular = self._update_pid(self.angle_min, self.dist_min, self.dist_front)
@@ -103,7 +115,7 @@ class explorer(object):
                     if(distance > 4):
                         start_zone = 0
                 else:
-                    if(distance < 1):
+                    if(distance < 0.375):
                         linear = 0
                         angular = 0
                         
@@ -116,23 +128,27 @@ class explorer(object):
                 # Wait to stop moving
                 if((self.set_x == 0) and (self.set_z == 0) ):
                     self._save_map()
+                    self._set_initial()
                     self.stage = self.stage + 1
                 
             elif(self.stage == 3):
                 self._open_cv_map()
-                self.stage = self.stage + 1
+                self.stage = self.stage + 2
                 
-            elif(self.stage == 4):
-                linear = 0
-                angular = 0 
+            elif(self.stage == 4): 
+                self.stage = self.stage + 1
+                cv2.waitKey(30)
+                
+            elif(self.stage == 5):
+                run = 0
                 cv2.waitKey(30)
                 
         
             self._update_cmd(linear, angular)
             self._publish_start_tf(start_trans, start_rot)
-            #rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f', self.stage,linear, angular)
+            rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f  -   D: %3.2f', self.stage,linear, angular, distance)
             self.rate.sleep()
-            
+     
         
     # Callback for laser data
     def _laser_cb(self,data):
@@ -180,7 +196,7 @@ class explorer(object):
         angular_msg = Vector3(x=float(0.0), y=float(0.0), z=self.set_z)
         publish_msg = Twist(linear=linear_msg, angular=angular_msg)
         
-        self.cmd_pub.publish(publish_msg)
+        #self.cmd_pub.publish(publish_msg)
 
 
     # Update the PID
@@ -199,8 +215,8 @@ class explorer(object):
         cmd_angular = (self.k_p * self.e_p) + (self.k_i * self.e_i) + (self.k_d * self.e_d) + self.angle_coef * (angle_min - math.pi / 2)
         
         # Limit max turn speed
-        if(cmd_angular > 1.5):
-            cmd_angular = 1.5
+        if(cmd_angular > 3.0):
+            cmd_angular = 3.0
         
         # Do some speed regulation based on how far open space we have
         speed = self.dist_front * self.max_speed / self.blind_threshold
@@ -309,6 +325,8 @@ class explorer(object):
             circle_area = math.pi * (radius ** 2)
             contour_area = cv2.contourArea(cont)
             
+            rospy.loginfo('Contour at: X: %d, Y: %d, R: %d',int(x), int(y), int(radius))
+            
             if((radius < (self.bunnie_radius + self.bunnie_delta)) and (radius > (self.bunnie_radius - self.bunnie_delta))):
                 if(len(bunnies) > 0):
                     prev_bunnie = 0
@@ -333,6 +351,27 @@ class explorer(object):
         cv2.imshow('Threshold', cv2.resize(threshing, (0,0), fx=0.5, fy=0.5))
         
         cv2.waitKey(30)
+        
+        
+    def _set_initial(self):
+        # Only set up for random x,y. Does not handle random spawn rotation
+        (success, trans, rot) = self._get_transform("map", "base_link")
+        
+        initialPose = PoseWithCovarianceStamped()
+        pub = rospy.Publisher('/initialpose', PoseWithCovarianceStamped, queue_size=10)
+        
+        initialPose.header.frame_id = "map"
+        initialPose.pose.pose.position = Point(trans[0],trans[1],trans[2])
+        initialPose.pose.pose.orientation = Quaternion(rot[0],rot[1],rot[2],rot[3])
+        #initialPose.pose.covariance = [0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.06853891945200942]
+        
+        # Send the message several times to be sure AMCL got the point
+        index = 0
+        while(index < 10):
+            initialPose.header.stamp = rospy.Time.now()
+            pub.publish(initialPose)
+            time.sleep(0.5) 
+            index = index + 1  
 
 # standard ros boilerplate
 if __name__ == "__main__":

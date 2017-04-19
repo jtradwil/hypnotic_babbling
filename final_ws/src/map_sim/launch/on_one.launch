@@ -1,7 +1,23 @@
 <launch>
 
-  <include file="$(find map_sim)/launch/simulation.launch" />
-  <include file="$(find map_sim)/launch/laptop.launch" />
-  <include file="$(find map_sim)/launch/jackal2.launch" />
+  <include file="$(find ee5900_jackal_gazebo)/launch/gazebo.launch">
+    <arg name="world_name" value="$(find ee5900_jackal_gazebo)/worlds/8th_floor_alvar.xml" />
+    <arg name="model_path" value="$(find ee5900_jackal_gazebo)/models" />
+  </include>
+  
+  <include file="$(find ee5900_jackal_gazebo)/launch/spawn.launch">
+    <arg name="spawn_x" value="0" />
+    <arg name="spawn_y" value="0" />
+    <arg name="spawn_z" value="0" />
+    <arg name="spawn_roll" value="0" />
+    <arg name="spawn_pitch" value="0" />
+    <arg name="spawn_yaw" value="0" />
+  </include>
+  
+  <include file="$(find map_sim)/launch/gmapping.launch" />
+  <include file="$(find map_sim)/launch/rviz.launch" />
+  
+  <node pkg="map_sim" name="explore2" type="explore3.py" required="true" output="screen"/>
+  <node pkg="map_sim" name="camera" type="camera.py" required="true" output="screen"/>
   
 </launch>
