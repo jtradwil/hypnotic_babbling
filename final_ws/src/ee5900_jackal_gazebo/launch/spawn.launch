@@ -17,7 +17,7 @@
   <!-- Spawn Jackal -->
   <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model"
 	      args="-urdf -model jackal_5900 -param robot_description
-	       -x $(arg spawn_x) -y $(arg spawn_x) -z $(arg spawn_z) 
+	       -x $(arg spawn_x) -y $(arg spawn_y) -z $(arg spawn_z) 
 	       -R $(arg spawn_roll) -P $(arg spawn_pitch) -Y $(arg spawn_yaw)" />
   
 </launch>

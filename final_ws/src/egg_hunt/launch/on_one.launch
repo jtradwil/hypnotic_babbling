@@ -6,7 +6,7 @@
   </include>
   
   <include file="$(find ee5900_jackal_gazebo)/launch/spawn.launch">
-    <arg name="spawn_x" value="0" />
+    <arg name="spawn_x" value="18" />
     <arg name="spawn_y" value="0" />
     <arg name="spawn_z" value="0" />
     <arg name="spawn_roll" value="0" />
@@ -14,12 +14,14 @@
     <arg name="spawn_yaw" value="0" />
   </include>
   
-  <include file="$(find map_sim)/launch/move_base.launch" />
+  <include file="$(find egg_hunt)/launch/alvar.launch" />
   
-  <include file="$(find map_sim)/launch/gmapping.launch" />
-  <include file="$(find map_sim)/launch/rviz.launch" />
+  <include file="$(find egg_hunt)/launch/move_base.launch" />
   
-  <node pkg="map_sim" name="explore2" type="explore3.py" required="true" output="screen"/>
+  <include file="$(find egg_hunt)/launch/gmapping.launch" />
+  <include file="$(find egg_hunt)/launch/rviz.launch" />
+  
+  <node pkg="egg_hunt" name="state_machine" type="hunty2.py" required="true" output="screen"/>
   <node pkg="map_sim" name="camera" type="camera.py" required="true" output="screen"/>
   
 </launch>

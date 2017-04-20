@@ -15,6 +15,7 @@ import rospkg
 import rosparam
 import cv2
 import copy
+import Queue
 
 class explorer(object):
     # Global variables for random bounds
@@ -58,20 +59,22 @@ class explorer(object):
     map_path = ""
     
     stage = 0
+    ret_stage = 0
+    start_zone = 1
     laser_valid = 0
 
-    def __init__(self):
+    def __init__(self, queue):
+        self.queue = queue
+    
         rospy.Subscriber("/scan", LaserScan, self._laser_cb)
         self.rate = rospy.Rate(self.run_rate)
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
         self.tf_lsnr = tf.TransformListener()
         self.start_bcst = tf.TransformBroadcaster()
         rospack = rospkg.RosPack()
-        self.map_path = str(rospack.get_path('map_sim')) + "/map/gmap"
-        self._run_states()
+        self.map_path = str(rospack.get_path('egg_hunt')) + "/map/gmap"        
         
-        
-    def _run_states(self):
+    def _run_wall_follow(self):
     
         run = 1
     
@@ -79,7 +82,6 @@ class explorer(object):
         angular = 0
         
         #Start zone variables
-        start_zone = 1
         start_trans = np.zeros(3)
         start_rot = np.zeros(4)
         start_rot[3] = 1
@@ -87,6 +89,11 @@ class explorer(object):
         distance = 0
     
         while not(rospy.is_shutdown()) and (run == 1):
+        
+            if(not(self.queue.empty()) and (self.stage > 0) ):
+                self.ret_stage = self.stage
+                self.stage = -1
+        
             if(self.stage == 0):
                 (success,start_trans, start_rot) = self._get_transform("map", "base_link")
                 if(self.laser_valid == 1):
@@ -108,9 +115,9 @@ class explorer(object):
                 (success,trans, rot) = self._get_transform("start_point", "base_link")
                 distance = np.linalg.norm(trans)
                 
-                if(start_zone == 1):
+                if(self.start_zone == 1):
                     if(distance > 4):
-                        start_zone = 0
+                        self.start_zone = 0
                 else:
                     if(distance < 0.375):
                         linear = 0
@@ -124,24 +131,21 @@ class explorer(object):
                 
                 # Wait to stop moving
                 if((self.set_x == 0) and (self.set_z == 0) ):
-                    self._save_map()
-                    self.stage = self.stage + 1
-                
-            elif(self.stage == 3):
-                self._open_cv_map()
-                self.stage = self.stage + 2
-                
-            elif(self.stage == 4): 
-                self.stage = self.stage + 1
-                cv2.waitKey(30)
-                
-            elif(self.stage == 5):
-                cv2.waitKey(30)
-                
+                    run = 0
+                    self.queue.put("DONE")
+                    
+            elif(self.stage == -1):
+                linear = 0
+                angular = 0
+            
+                if( (self.set_x == 0) and (self.set_z == 0) ):
+                    self.stage = self.ret_stage
+                    run = 0
+                    
         
             self._update_cmd(linear, angular)
             self._publish_start_tf(start_trans, start_rot)
-            rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f  -   D: %3.2f', self.stage,linear, angular, distance)
+            rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f  -   D: %3.2f', self.stage, self.set_x, self.set_z, distance)
             self.rate.sleep()
      
         
@@ -191,7 +195,7 @@ class explorer(object):
         angular_msg = Vector3(x=float(0.0), y=float(0.0), z=self.set_z)
         publish_msg = Twist(linear=linear_msg, angular=angular_msg)
         
-        self.cmd_pub.publish(publish_msg)
+        #self.cmd_pub.publish(publish_msg)
 
 
     # Update the PID
@@ -242,7 +246,7 @@ class explorer(object):
         if self.tf_lsnr.frameExists(source_frame) and self.tf_lsnr.frameExists(target_frame):
             try:
                 now = rospy.Time(0)
-                self.tf_lsnr.waitForTransform(source_frame, target_frame, now, rospy.Duration(2.0))
+                self.tf_lsnr.waitForTransform(source_frame, target_frame, now, rospy.Duration(4.0))
                 trans, rot  = self.tf_lsnr.lookupTransform(source_frame, target_frame, now)
                 
                 success = 1
@@ -334,24 +338,26 @@ class explorer(object):
                     if(prev_bunnie == 0):
                         rospy.loginfo('\tNew at: X: %d, Y: %d, R: %d',int(x), int(y), int(radius))
                         bunnies.append([x,y,radius])
+                        self.queue.put([x,y,radius])
                         cv2.circle(color, (int(x), int(y)), int(radius), (255, 0, 0), 2)
                             
                 else:
                     rospy.loginfo('\tFirst at: X: %d, Y: %d, R: %d',int(x), int(y), int(radius))
                     bunnies.append([x,y,radius])
+                    self.queue.put([x,y,radius])
                     cv2.circle(color, (int(x), int(y)), int(radius), (255, 0, 0), 2)
         
         cv2.imshow('map', cv2.resize(img, (0,0), fx=0.5, fy=0.5))
         cv2.imshow('Result', cv2.resize(color, (0,0), fx=0.5, fy=0.5))
         cv2.imshow('Threshold', cv2.resize(threshing, (0,0), fx=0.5, fy=0.5))
         
-        cv2.waitKey(30)
+        cv2.waitKey(1000)
         
 
 # standard ros boilerplate
 if __name__ == "__main__":
     try:
-        rospy.init_node("jackal_explore")
+        #rospy.init_node("jackal_explore")
         time.sleep(10)
         explorer = explorer()
     except rospy.ROSInterruptException:

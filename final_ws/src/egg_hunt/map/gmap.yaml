@@ -1,4 +1,4 @@
-image: /home/ros/EE5900_Repos/temp/hypnotic_babbling/final_ws/src/map_sim/map/gmap.pgm
+image: /home/ros/EE5900_Repos/temp/hypnotic_babbling/final_ws/src/egg_hunt/map/gmap.pgm
 resolution: 0.025000
 origin: [-25.000000, -13.000000, 0.000000]
 negate: 0

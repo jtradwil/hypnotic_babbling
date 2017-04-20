@@ -1,10 +1,37 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://ros.org/wiki/xacro" name="lms291_lrf">
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="ps3_eye_model">
   <xacro:property name="PI" value="3.1415926535897931" />
   
   <material name="ps3_eye_grey">
     <color rgba=".1 .1 .1 1.0"/>
   </material>
+  
+  <!-- Image Frame link (for rotation) -->
+  <link name="image_frame">
+    <inertial>
+      <mass value="0.001" />
+      <origin xyz="0 0 0" />
+      <inertia
+      ixx="0.0" ixy="0.0" ixz="0.0"
+      iyy="0.0" iyz="0.0"
+      izz="0.0"/>
+    </inertial>
+    
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.001" />
+      </geometry>
+      <material name="ps3_eye_grey"/>
+    </visual>
+    
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.001" />
+      </geometry>
+    </collision>
+  </link>
   
   <!-- Camera model -->
   <link name="ps3_eye_camera">
@@ -61,9 +88,16 @@
     </collision>
   </link>
 
+  <!-- Link for alvar to camera -->
+  <joint name="image_frame_to_ps3_eye_camera" type="fixed">
+    <origin xyz="0 0 0" rpy="${-90 * PI / 180} 0 ${-90 * PI / 180}" /> 
+    <parent link="ps3_eye_camera"/>
+    <child link="image_frame"/>
+  </joint>
+
   <!-- Link for Camera to Base -->
   <joint name="ps3_eye_camera_to_ps3_eye_base" type="fixed">
-    <origin xyz="0 0 0.02661056536" rpy="0 ${10 * PI / 180} 0" /> 
+    <origin xyz="0 0 0.02661056536" rpy="0 ${25 * PI / 180} 0" /> 
     <parent link="ps3_eye_base"/>
     <child link="ps3_eye_camera"/>
   </joint>
@@ -103,8 +137,8 @@
         <updateRate>0.0</updateRate>
         <cameraName>jackal/ps3_eye_camera</cameraName>
         <imageTopicName>/usb_cam/image_raw</imageTopicName>
-        <cameraInfoTopicName>camera_info</cameraInfoTopicName>
-        <frameName>ps3_eye_camera</frameName>
+        <cameraInfoTopicName>/usb_cam/camera_info</cameraInfoTopicName>
+        <frameName>image_frame</frameName>
         <hackBaseline>0.07</hackBaseline>
         <distortionK1>0.0</distortionK1>
         <distortionK2>0.0</distortionK2>
