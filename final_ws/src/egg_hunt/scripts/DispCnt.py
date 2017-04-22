@@ -2,6 +2,7 @@
 
 import numpy as np
 import cv2
+import rospkg
 pink=0
 yellow=1
 green=1
@@ -14,7 +15,7 @@ green_dim=(946,1264)
 blue_dim=(1283,1251)
 voilet_dim=(1633,1267)
 orange_dim=(1953,1254)
-img = cv2.imread('egg_count.jpg',1)
+img = cv2.imread(str(rospkg.RosPack().get_path('egg_hunt'))+"/scripts/egg_count.jpg",1)
 
 cv2.putText(img,str(pink), pink_dim, cv2.FONT_HERSHEY_TRIPLEX, 5, 255,5)
 cv2.putText(img,str(yellow), yellow_dim, cv2.FONT_HERSHEY_TRIPLEX, 5, 255,5)
