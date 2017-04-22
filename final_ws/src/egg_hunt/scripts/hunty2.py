@@ -8,6 +8,7 @@ import threading
 import Queue
 
 import explore4
+import alvar_tracker
 
 class myThread (threading.Thread):
     def __init__(self, name, function):
@@ -40,22 +41,41 @@ class map_state(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Entering map State')
     
-        queue = Queue.Queue()
-        explorer = explore4.explorer(queue)        
-        explorerThread = myThread("Explorer Thread", explorer._run_wall_follow)
-        explorerThread.start()
+        alvar_queue = Queue.Queue()
+        map_queue = Queue.Queue()
+        
+        # Setup the wall following thread
+        explorer = explore4.explorer(map_queue)        
+        explorer_thread = myThread("Mapping Thread", explorer._run_wall_follow)
+        explorer_thread.start()
+        
+        tag_tracker = alvar_tracker.alvar_tracker(alvar_queue)
+        tag_tracker_thread = myThread("Alvar Thread", tag_tracker._run)
+        tag_tracker_thread.start()
         
         explorer_finished = 0
-        while (explorerThread.isAlive() and not(explorer_finished)) :
+        while (explorer_thread.isAlive() and not(explorer_finished)) :
             time.sleep(10)
             
-            queue.put("KILL")
-            
-            while (explorerThread.isAlive()):
-                pass
+            # Alvar maker found
+            if(not(alvar_queue.empty())):
+                # Kill the map thread if an alvar tag is found
+                map_queue.put("KILL")
                 
-            while(not(queue.empty())):
-                cmd = queue.get()
+                # Wait until the thread dies
+                while (explorer_thread.isAlive()):
+                    pass
+                    
+                    
+                # Restart the map thread
+                if(not(explorer_finished)):
+                    explorer_thread = myThread("Explorer Thread", explorer._run_wall_follow)
+                    explorer_thread.start()
+                
+                
+            # clear the map queue, escape if mapping is done
+            while(not(map_queue.empty())):
+                cmd = map_queue.get()
                 
                 rospy.loginfo("COMMAND: %s", cmd)
                 
@@ -63,19 +83,15 @@ class map_state(smach.State):
                     rospy.loginfo("ESCAPE")
                     explorer_finished = 1
             
-            if(not(explorer_finished)):
-                explorerThread = myThread("Explorer Thread", explorer._run_wall_follow)
-                explorerThread.start()
+
             
-        #explorer._save_map()
-        #explorer._open_cv_map()
+        explorer._save_map()
+        explorer._open_cv_map()
             
-        #while(not(queue.empty())):
-        #    bunny = queue.get()
-        #    rospy.loginfo('\t Possible Bunny at X: %d, Y: %d, R: %d', bunny[0], bunny[1], bunny[2])
+        while(not(map_queue.empty())):
+            bunny = map_queue.get()
+            rospy.loginfo('\t Possible Bunny at X: %d, Y: %d, R: %d', bunny[0], bunny[1], bunny[2])
             
-            
-        #explorer = explore4.explorer(self.cb)
         return 'map_found_all'
 
 class go_home_state(smach.State):
@@ -172,7 +188,7 @@ def main():
                      
         smach.StateMachine.add('wait_state', wait_state(), 
             transitions={'wait_target_acquired':'nav_to_target_state', 
-                         'wait_for_target':'explore_state'})         
+                         'wait_for_target':'wait_state'})         
                            
         smach.StateMachine.add('nav_to_target_state', nav_to_target_state(), 
             transitions={'nav_pass':'count_eggs_state', 

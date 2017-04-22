@@ -20,6 +20,5 @@
   <include file="$(find map_sim)/launch/rviz.launch" />
   
   <node pkg="map_sim" name="explore2" type="explore3.py" required="true" output="screen"/>
-  <node pkg="map_sim" name="camera" type="camera.py" required="true" output="screen"/>
   
 </launch>
