@@ -162,3 +162,6 @@ def find(image, avg):
 
     return [pink, yellow, green, blue, orange, purple]
 
+def count_eggs(image):
+    return find(crop_height(image),avg_size(crop_height(image)))
+
