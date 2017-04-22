@@ -1,0 +1,7 @@
+<launch>
+
+  <include file="$(find map_sim)/launch/simulation.launch" />
+  <include file="$(find map_sim)/launch/laptop.launch" />
+  <include file="$(find map_sim)/launch/jackal2.launch" />
+  
+</launch>

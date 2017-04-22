@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="map_sim" name="explore2" type="explore3.py" required="true" output="screen"/>
+</launch>
