@@ -1,5 +1,5 @@
 <launch>
-    <include file="$(find map_sim)/launch/description.launch" />
+    <include file="$(find ee5900_jackal_description)/launch/description.launch" />
 
     <node name="sicklms" pkg="sicktoolbox_wrapper" type="sicklms" args="_port:=/dev/ttyS0 _baud:=38400  _frame_id:=lms291"/>
 

@@ -145,7 +145,7 @@ class explorer(object):
         
             self._update_cmd(linear, angular)
             self._publish_start_tf(start_trans, start_rot)
-            rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f  -   D: %3.2f', self.stage, self.set_x, self.set_z, distance)
+            #rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f  -   D: %3.2f', self.stage, self.set_x, self.set_z, distance)
             self.rate.sleep()
      
         
@@ -195,7 +195,7 @@ class explorer(object):
         angular_msg = Vector3(x=float(0.0), y=float(0.0), z=self.set_z)
         publish_msg = Twist(linear=linear_msg, angular=angular_msg)
         
-        #self.cmd_pub.publish(publish_msg)
+        self.cmd_pub.publish(publish_msg)
 
 
     # Update the PID

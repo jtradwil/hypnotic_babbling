@@ -191,7 +191,7 @@ class explorer(object):
         angular_msg = Vector3(x=float(0.0), y=float(0.0), z=self.set_z)
         publish_msg = Twist(linear=linear_msg, angular=angular_msg)
         
-        self.cmd_pub.publish(publish_msg)
+        #self.cmd_pub.publish(publish_msg)
 
 
     # Update the PID

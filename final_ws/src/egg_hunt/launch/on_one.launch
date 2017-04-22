@@ -6,7 +6,7 @@
   </include>
   
   <include file="$(find ee5900_jackal_gazebo)/launch/spawn.launch">
-    <arg name="spawn_x" value="18" />
+    <arg name="spawn_x" value="0" />
     <arg name="spawn_y" value="0" />
     <arg name="spawn_z" value="0" />
     <arg name="spawn_roll" value="0" />
@@ -21,7 +21,7 @@
   <include file="$(find egg_hunt)/launch/gmapping.launch" />
   <include file="$(find egg_hunt)/launch/rviz.launch" />
   
-  <node pkg="egg_hunt" name="state_machine" type="hunty2.py" required="true" output="screen"/>
+  <node pkg="egg_hunt" name="state_machine" type="hunty2.py" required="true" output="screen" launch-prefix="xterm -e" />
   <node pkg="map_sim" name="camera" type="camera.py" required="true" output="screen"/>
   
 </launch>
