@@ -30,6 +30,8 @@ def explore():
     img = cv2.imread(str(rospkg.RosPack().get_path('egg_hunt')) + "/map/gmap" + ".pgm",0)
     color = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     height, width, channels = color.shape
+    mask = cv2.inRange(img, 250, 255)
+    mask = cv2.erode(mask, None, iterations=30)
 
     #get the origin and resolution
     paramlist=rosparam.load_file(str(rospkg.RosPack().get_path('egg_hunt')) + "/map/gmap" + ".yaml",default_namespace="map_params")   
@@ -38,42 +40,55 @@ def explore():
     origin = rospy.get_param('/map_params/origin')
     resolution = rospy.get_param('/map_params/resolution')
 
+    count=0
+    
     #find a point in the  first quadrant
     temp_x=random.randrange(0, width/2,1)
     temp_y=random.randrange(0, height/2,1)
-    while(img[temp_y, temp_x] != 254):
+    while(mask[temp_y, temp_x] != 255) and (count<width*height/10):
         temp_x=random.randrange(0, width/2,1)
         temp_y=random.randrange(0, height/2,1)
-    pos_x.append((temp_x*resolution+origin[0])
-    pos_y.append((temp_y*resolution+origin[1])
-
+        count=count+1
+    if (count<width*height/10):
+        pos_x.append(temp_x*resolution+origin[0])
+        pos_y.append(temp_y*resolution+origin[1])
+    count = 0    
+    
     #find a point in the second quadrant
     temp_x=random.randrange(width/2, width-1,1)
     temp_y=random.randrange(0, height/2,1)
-    while(img[temp_y, temp_x] != 254):
+    while(mask[temp_y, temp_x] != 255) and (count<width*height/10):
         temp_x=random.randrange(width/2, width-1,1)
         temp_y=random.randrange(0, height/2,1)
-    pos_x.append((temp_x*resolution+origin[0])
-    pos_y.append((temp_y*resolution+origin[1])
+        count=count+1
+    if (count<width*height/10):
+        pos_x.append(temp_x*resolution+origin[0])
+        pos_y.append(temp_y*resolution+origin[1])
+    count = 0 
 
     #find a point in the third quadrant
     temp_x=random.randrange(width/2, width-1,1)
     temp_y=random.randrange(height/2, height-1,1)
-    while(img[temp_y, temp_x] != 254):
+    while(mask[temp_y, temp_x] != 255) and (count<width*height/10):
         temp_x=random.randrange(width/2, width-1,1)
         temp_y=random.randrange(height/2, height-1,1)
-    pos_x.append((temp_x*resolution+origin[0])
-    pos_y.append((temp_y*resolution+origin[1])
+        count=count+1
+    if (count<width*height/10):
+        pos_x.append(temp_x*resolution+origin[0])
+        pos_y.append(temp_y*resolution+origin[1])
+    count = 0 
 
     #find a point in the fourth quadrant
     temp_x=random.randrange(0, width/2,1)
     temp_y=random.randrange(height/2, height-1,1)
-    while(img[temp_y, temp_x] != 254):
+    while(mask[temp_y, temp_x] != 255) and (count<width*height/10):
         temp_x=random.randrange(0, width/2,1)
         temp_y=random.randrange(height/2, height-1,1)
-    pos_x.append((temp_x*resolution+origin[0])
-    pos_y.append((temp_y*resolution+origin[1])
-
+        count=count+1
+    if (count<width*height/10):
+        pos_x.append(temp_x*resolution+origin[0])
+        pos_y.append(temp_y*resolution+origin[1])
+    count = 0 
 
     #go to each point and pose in all four orientations. 
     for i in range(0, len(pos_x)):
@@ -127,9 +142,6 @@ def moveToGoal(xGoal,yGoal,yawGoal,tLimit):
 		return False
         
 
-# FUNCTION: init()
-# Initializes this node and sets up subsciber for Path messages.
-# Then spawns a new Jackal using the random spawn function
 def init():
     rospy.init_node('random_explorer', anonymous=False)
 
