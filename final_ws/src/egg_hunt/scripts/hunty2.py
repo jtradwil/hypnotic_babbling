@@ -6,9 +6,22 @@ import numpy as np
 import time
 import threading
 import Queue
+import tf
+from geometry_msgs.msg import PoseStamped
+import cv_bridge
+import cv2
+from sensor_msgs.msg import Image
 
+import eggs
 import explore4
 import alvar_tracker
+import move_to
+
+
+possible_bunnies = []
+found_markers = []
+target_index = 0
+
 
 class myThread (threading.Thread):
     def __init__(self, name, function):
@@ -20,6 +33,35 @@ class myThread (threading.Thread):
         print "Starting " + self.name
         self.function()
         print "Exiting " + self.name
+        
+def kill_thread(my_thread, my_queue):
+    my_queue.put("KILL")
+    while (my_thread.isAlive()):
+        pass
+        
+def clear_queue(my_queue):
+    ret_val = 0
+    time.sleep(1)   
+    # clear the map queue, escape if mapping is done
+    
+    clearing = 1
+    while(not(my_queue.empty()) and (clearing == 1)):
+        cmd = my_queue.get()
+        
+        if(cmd == "DONE"):
+            ret_val = 1
+            
+    return ret_val
+        
+def restart_thread():
+    # Alvar maker found
+    if(not(alvar_queue.empty())):
+        kill_thread(explorer_thread, map_queue)                    
+            
+        # Restart the map thread
+        if(not(explorer_finished)):
+            explorer_thread = myThread("Explorer Thread", explorer._run_wall_follow)
+            explorer_thread.start()
 
 class init_state(smach.State):
     def __init__(self):
@@ -39,6 +81,8 @@ class map_state(smach.State):
         rospy.loginfo('Explorer returned')
         
     def execute(self, userdata):
+        global possible_bunnies, found_markers
+    
         rospy.loginfo('Entering map State')
     
         alvar_queue = Queue.Queue()
@@ -49,50 +93,48 @@ class map_state(smach.State):
         explorer_thread = myThread("Mapping Thread", explorer._run_wall_follow)
         explorer_thread.start()
         
-        tag_tracker = alvar_tracker.alvar_tracker(alvar_queue)
+        tag_tracker = alvar_tracker.alvar_tracker(alvar_queue, 3)
         tag_tracker_thread = myThread("Alvar Thread", tag_tracker._run)
         tag_tracker_thread.start()
         
         explorer_finished = 0
-        while (explorer_thread.isAlive() and not(explorer_finished)) :
-            time.sleep(10)
+        alvar_finished = 0
+        
+        while(explorer_thread.isAlive()) :
+            if(tag_tracker_thread.isAlive()):
+                pass
+            else:
+                alvar_finished = 1
+                kill_thread(explorer_thread, map_queue)
+                clear_queue(map_queue)
+                
+                
+        kill_thread(tag_tracker_thread, alvar_queue)       
+        clear_queue(alvar_queue)
+        tag_tracker._return_markers()
+        
+        while(not(alvar_queue.empty())):
+            marker = alvar_queue.get()
+            found_markers.append(marker)
+            rospy.loginfo('Storing Marker %d at: X: %f, Y:, %f', marker[0], marker[1], marker[2])
             
-            # Alvar maker found
-            if(not(alvar_queue.empty())):
-                # Kill the map thread if an alvar tag is found
-                map_queue.put("KILL")
-                
-                # Wait until the thread dies
-                while (explorer_thread.isAlive()):
-                    pass
-                    
-                    
-                # Restart the map thread
-                if(not(explorer_finished)):
-                    explorer_thread = myThread("Explorer Thread", explorer._run_wall_follow)
-                    explorer_thread.start()
-                
-                
-            # clear the map queue, escape if mapping is done
+          
+        # Alvar didn't find all nodes so look at map for possible locations  
+        if(alvar_finished == 0):
+            explorer._save_map()
+            explorer._open_cv_map()
+            
             while(not(map_queue.empty())):
-                cmd = map_queue.get()
+                bunny = map_queue.get()
+                possible_bunnies.append(bunny)
                 
-                rospy.loginfo("COMMAND: %s", cmd)
+            if(len(possible_bunnies) > 0):
+                return 'map_found_possible'
+            else:
+                return 'map_found_none'
                 
-                if(cmd == "DONE"):
-                    rospy.loginfo("ESCAPE")
-                    explorer_finished = 1
-            
-
-            
-        explorer._save_map()
-        explorer._open_cv_map()
-            
-        while(not(map_queue.empty())):
-            bunny = map_queue.get()
-            rospy.loginfo('\t Possible Bunny at X: %d, Y: %d, R: %d', bunny[0], bunny[1], bunny[2])
-            
-        return 'map_found_all'
+        else: 
+            return 'map_found_all'
 
 class go_home_state(smach.State):
     def __init__(self):
@@ -100,7 +142,20 @@ class go_home_state(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo('Entering home State')
-        return 'home_pass'
+        home_mover = move_to.move_to()
+        
+        home_mover._move_to_goal(0,0,0)
+        
+        status = 0
+        
+        while(status == 0):
+            status = home_mover._check_goal_status(30)
+            pass
+            
+        if(status == 1):
+            return 'home_pass'
+        else:
+            return 'home_fail'
 
 class interrogate_state(smach.State):
     def __init__(self):
@@ -123,27 +178,115 @@ class wait_state(smach.State):
         smach.State.__init__(self, outcomes=['wait_target_acquired', 'wait_for_target'])
 
     def execute(self, userdata):
+        global target_index
         rospy.loginfo('Entering wait State')
-        return 'wait_target_acquired'
+        
+        
+        time.sleep(5)        
+        
+        target_queue = Queue.Queue()
+        target_tracker = alvar_tracker.alvar_tracker(target_queue, 1)
+        target_tracker_thread = myThread("Target Thread", target_tracker._run)
+        target_tracker_thread.start()
+        
+        
+        rospy.loginfo('Waiting for marker')
+        
+        while(target_tracker_thread.isAlive()) :
+            pass
+            
+        kill_thread(target_tracker_thread, target_queue)       
+        clear_queue(target_queue)
+            
+        rospy.loginfo('Found Markers')    
+        target_tracker._return_markers()
+        
+        rospy.loginfo('Got Markers')    
+        
+        target_id = target_queue.get()[0]
+        
+        rospy.loginfo('Marker ID is %d', target_id)    
+        
+        index = 0
+        good_target = 0
+        
+        while((index < len(found_markers)) and not(good_target)):
+            if(found_markers[index][0] == target_id):
+                good_target = 1
+                target_index = index
+            index = index + 1
+                
+        rospy.loginfo('Going to marker %d, index %d', target_id, target_index)  
+                
+        if(good_target == 1):
+            return 'wait_target_acquired'
+        else:
+            return 'wait_for_target'
         
 class nav_to_target_state(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['nav_pass', 'nav_fail'])
-        
+        self.start_bcst = tf.TransformBroadcaster()
 
     def execute(self, userdata):
         rospy.loginfo('Entering nav State')
-        return 'nav_pass'
+        
+        time.sleep(5)  
+        
+        tar_x = found_markers[target_index][1]
+        tar_y = found_markers[target_index][2]
+        tar_rx = found_markers[target_index][4]
+        tar_ry = found_markers[target_index][5]
+        tar_rz = found_markers[target_index][6]
+        tar_rw = found_markers[target_index][7]
+        
+        target_mover = move_to.move_to()
+        
+        target_mover._move_to_pose(tar_x, tar_y, tar_rx, tar_ry, tar_rz, tar_rw)
+        
+        status = 0
+        
+        rate = rospy.Rate(10)
+        
+        while(status == 0):
+            self._publish_tf(found_markers[target_index])
+            status = target_mover._check_goal_status(30)
+            rate.sleep()
+            
+        if(status == 1):
+            return 'nav_pass'
+        else:
+            return 'nav_fail'
+            
+            
+    def _publish_tf(self, marker):
+    
+        ar_frame = "target_marker_" + str(marker[0])    
+        
+        self.start_bcst.sendTransform( (marker[1], marker[2], marker[3]),
+                                       (marker[4], marker[5], marker[6], marker[7]),
+                                       rospy.Time.now(), ar_frame, "map")
         
 class count_eggs_state(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['count_pass', 'count_fail', 'count_error'])
-
+        
+    def image_callback(self, msg):
+        global eggs_counted
+        image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")	#convert image
+        print eggs.find(eggs.crop_height(image),eggs.avg_size(eggs.crop_height(image)))	#count the eggs
+        self.eggs_counted=1	#set flag
+        self.image_sb.unregister()	#unsubscribe
+        
     def execute(self, userdata):
         rospy.loginfo('Entering count State')
-        while not(rospy.is_shutdown()):
+        self.bridge = cv_bridge.CvBridge()
+        self.eggs_counted = 0
+        self.image_sb = rospy.Subscriber('/usb_cam/image_raw', Image, self.image_callback) #subscribe to usb_cam topic
+        while (self.eggs_counted==0):	#loop until eggs have been counted
             pass
-        return 'count_error'
+        
+        return 'count_pass'
                         
 # Error
 class error_state(smach.State):
@@ -208,6 +351,7 @@ def main():
 
 
 if __name__ == '__main__':
+    time.sleep(10)
     main()
 
 

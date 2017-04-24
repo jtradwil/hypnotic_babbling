@@ -19,41 +19,41 @@ import Queue
 
 class explorer(object):
     # Global variables for random bounds
-    blind_threshold = 3.5
-    run_rate = 50
+    blind_threshold = 1.0
+    run_rate = 50.0
     linear_acc  =  1.0 / run_rate
-    angular_acc =  10.0 / run_rate
-    angle_threshold = 60 * 3.14159 / 180
-    bunnie_delta = 3
-    bunnie_radius = 7
+    angular_acc =  20.0 / run_rate
+    angle_threshold = 60.0 * 3.14159 / 180.0
+    bunnie_delta = 2.0
+    bunnie_radius = 6.0
     
     # Frame definitions
     map_frame = "map"
     start_frame = "start_point"
 
     # Run setpoints
-    wall_distance = 0.75
-    max_speed = 0.75
+    wall_distance = 0.5
+    max_speed = 0.25
     
     # Laser Information
-    angle_min = 0
-    dist_min = 0
-    dist_front = 0
+    angle_min = 0.0
+    dist_min = 0.0
+    dist_front = 0.0
 
     # PID Coefficients
-    angle_coef = 1.25
-    k_p = 2
-    k_i = 0
-    k_d = 2
+    angle_coef = 1.0
+    k_p = 2.0
+    k_i = 0.0
+    k_d = 1.0
 
     # PID Error
-    e_p = 0
-    e_i = 0
-    e_d = 0
+    e_p = 0.0
+    e_i = 0.0
+    e_d = 0.0
 
     # Current set drive setpoints
-    set_x = 0
-    set_z = 0
+    set_x = 0.0
+    set_z = 0.0
     
     # Map Params
     map_path = ""
@@ -98,9 +98,9 @@ class explorer(object):
                 (success,start_trans, start_rot) = self._get_transform("map", "base_link")
                 if(self.laser_valid == 1):
                     self.laser_valid == 0
-                    if(self.dist_min > (self.wall_distance + 0.25)):
-                        linear = 0.5
-                        angular = 0.125
+                    if(self.dist_min > (self.wall_distance+0.5)):
+                        linear = 0.125
+                        angular = 0.25
                     elif(success == 1):
                         linear = 0
                         angular = 0
@@ -110,8 +110,12 @@ class explorer(object):
                         angular = 0
                         
             elif(self.stage == 1):
-                linear, angular = self._update_pid(self.angle_min, self.dist_min, self.dist_front)
-                
+                if(self.laser_valid == 1):
+                    linear, angular = self._update_pid(self.angle_min, self.dist_min, self.dist_front)
+                else:
+                    linear = 0
+                    angular = 0
+                    
                 (success,trans, rot) = self._get_transform("start_point", "base_link")
                 distance = np.linalg.norm(trans)
                 
@@ -119,7 +123,7 @@ class explorer(object):
                     if(distance > 4):
                         self.start_zone = 0
                 else:
-                    if(distance < 0.375):
+                    if(distance < 1):
                         linear = 0
                         angular = 0
                         
@@ -145,7 +149,8 @@ class explorer(object):
         
             self._update_cmd(linear, angular)
             self._publish_start_tf(start_trans, start_rot)
-            #rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f  -   D: %3.2f', self.stage, self.set_x, self.set_z, distance)
+            rospy.loginfo('%d: A: %2.4f  -   D: %2.4f  -   F: %3.2f - V: %d', self.stage, self.angle_min, self.dist_min, self.dist_front, self.laser_valid)
+            rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f  -   D: %3.2f', self.stage, self.set_x, self.set_z, distance)
             self.rate.sleep()
      
         
@@ -154,18 +159,26 @@ class explorer(object):
         global angle_min, dist_min, dist_front, first_wall
         
         size = len(data.ranges)
-        minIndex = size/2
+        minIndex = size * 8/16
         maxIndex = size
         
-        for i in range(minIndex,maxIndex):
-            if (data.ranges[i] < data.ranges[minIndex]) and (data.ranges[i] > 0.0):
-                minIndex = i
-                
-        self.angle_min = (minIndex - size/2) * data.angle_increment
-        self.dist_min = data.ranges[minIndex]
-        self.dist_front = data.ranges[size/2]
+        if(size > 0):
+            for i in range(minIndex,maxIndex):
+                if((data.ranges[i] >= data.range_min) and  (data.ranges[i] <= data.range_max)):
+                    if ( (data.ranges[i] < data.ranges[minIndex]) and (data.ranges[i] > 0.125)  and not(math.isnan(data.ranges[i])) ):
+                        minIndex = i
+            
+            self.angle_min = (minIndex - size/2) * data.angle_increment
+            self.dist_min = data.ranges[minIndex]
+            #self.dist_front = data.ranges[size/2]
+            self.dist_front = self._get_min((size/2) - 10, (size/2) + 10, data)
         
-        self.laser_valid = 1
+            if(math.isnan(self.angle_min) or math.isnan(self.dist_min) or math.isnan(self.dist_front)):
+                self.laser_valid = 0
+            else:
+                self.laser_valid = 1
+        else:
+            self.laser_valid = 0
         
     # Update and pubish the drive commands
     def _update_cmd(self, cmd_x, cmd_z):
@@ -214,8 +227,11 @@ class explorer(object):
         cmd_angular = (self.k_p * self.e_p) + (self.k_i * self.e_i) + (self.k_d * self.e_d) + self.angle_coef * (angle_min - math.pi / 2)
         
         # Limit max turn speed
-        if(cmd_angular > 3.0):
-            cmd_angular = 3.0
+        if(cmd_angular > 1.0):
+            cmd_angular = 1.0
+            
+        elif(cmd_angular < -1.0):
+            cmd_angular = -1.0
         
         # Do some speed regulation based on how far open space we have
         speed = self.dist_front * self.max_speed / self.blind_threshold
@@ -347,12 +363,25 @@ class explorer(object):
                     self.queue.put([x,y,radius])
                     cv2.circle(color, (int(x), int(y)), int(radius), (255, 0, 0), 2)
         
-        cv2.imshow('map', cv2.resize(img, (0,0), fx=0.5, fy=0.5))
-        cv2.imshow('Result', cv2.resize(color, (0,0), fx=0.5, fy=0.5))
-        cv2.imshow('Threshold', cv2.resize(threshing, (0,0), fx=0.5, fy=0.5))
+        #cv2.imshow('map', cv2.resize(img, (0,0), fx=0.5, fy=0.5))
+        #cv2.imshow('Result', cv2.resize(color, (0,0), fx=0.5, fy=0.5))
+        #cv2.imshow('Threshold', cv2.resize(threshing, (0,0), fx=0.5, fy=0.5))
         
-        cv2.waitKey(1000)
+        #cv2.waitKey(1000)
         
+        
+    def _get_min(self, start, end, data):
+        index = start
+        
+        min_scan = data.ranges[start]
+        
+        while index < end :
+            if data.ranges[index] < min_scan:
+                min_scan = data.ranges[index]
+
+            index = index + 1
+
+        return min_scan
 
 # standard ros boilerplate
 if __name__ == "__main__":

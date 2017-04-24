@@ -57,6 +57,25 @@ def cvt_pose(pose):
     ret_pose.pose.orientation.z=quaternion[2]
     ret_pose.pose.orientation.w=quaternion[3]
     return ret_pose
+    
+def get_yaw(x, y, rx, ry, rz, rw):
+    quaternion = (rx, ry, rz, rw)
+
+    euler = tf.transformations.euler_from_quaternion(quaternion)
+    yaw=euler[2]
+    x=math.cos(yaw)+x
+    y=math.sin(yaw)+y
+
+    if (yaw<3.14):    
+        new_yaw=yaw+3.14
+    else:
+        new_yaw=yaw-3.14
+
+    ret_quanternion = tf.transformations.quaternion_from_euler(0, 0, new_yaw)
+    
+    return ret_quanternion
+    
+
 
 
 # define state Map

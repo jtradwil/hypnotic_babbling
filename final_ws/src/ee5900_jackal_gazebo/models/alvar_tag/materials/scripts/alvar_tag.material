@@ -51,3 +51,21 @@ material AlvarTag/Tag_2
     }
   }
 }
+
+material AlvarTag/Tag_3
+{
+  receive_shadows off
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture MarkerData_3.png
+        filtering anistropic
+        max_anisotropy 16
+      }
+      
+    }
+  }
+}

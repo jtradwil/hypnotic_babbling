@@ -21,7 +21,7 @@
   <include file="$(find egg_hunt)/launch/gmapping.launch" />
   <include file="$(find egg_hunt)/launch/rviz.launch" />
   
-  <node pkg="egg_hunt" name="state_machine" type="hunty2.py" required="true" output="screen" launch-prefix="xterm -e" />
-  <node pkg="map_sim" name="camera" type="camera.py" required="true" output="screen"/>
+  <node pkg="egg_hunt" name="state_machine" type="hunty2.py" required="true" output="screen" />
+  <node pkg="map_sim" name="camera" type="camera.py" required="true" output="screen" />
   
 </launch>
