@@ -131,6 +131,14 @@ class map_state(smach.State):
                 found_markers.append(marker)
                 rospy.loginfo('Storing Marker %d at: X: %f, Y:, %f', marker[0], marker[1], marker[2])
             
+            
+            del alvar_queue
+            del map_queue
+            del explorer
+            del explorer_thread
+            del tag_tracker
+            del tag_tracker_thread
+            
             return 'map_found_none'
             
             if(len(possible_bunnies) > 0):
@@ -146,6 +154,13 @@ class map_state(smach.State):
                 marker = alvar_queue.get()
                 found_markers.append(marker)
                 rospy.loginfo('Storing Marker %d at: X: %f, Y:, %f', marker[0], marker[1], marker[2])
+        
+            del alvar_queue
+            del map_queue
+            del explorer
+            del explorer_thread
+            del tag_tracker
+            del tag_tracker_thread
         
             return 'map_found_all'
 
@@ -164,6 +179,8 @@ class go_home_state(smach.State):
         while(status == 0):
             status = home_mover._check_goal_status(30)
             pass
+            
+        del home_mover
             
         if(status == 1):
             return 'home_pass'
@@ -209,7 +226,7 @@ class explore_state(smach.State):
                 clear_queue(rand_queue)
                 
                 
-        kill_thread(tag_tracker2_thread, alvar_queue)       
+        kill_thread(tag_tracker2_thread, alvar2_queue)       
         clear_queue(alvar2_queue)
         
         del found_markers[:] 
@@ -224,6 +241,13 @@ class explore_state(smach.State):
                 found_markers.append(marker)
                 rospy.loginfo('Storing Marker %d at: X: %f, Y:, %f', marker[0], marker[1], marker[2])
         
+            del alvar2_queue
+            del rand_queue
+            del exp_rand
+            del exp_rand_thread
+            del tag_tracker2
+            del tag_tracker2_thread
+        
             return 'explore_pass'
             
         else:
@@ -234,6 +258,13 @@ class explore_state(smach.State):
                 marker = alvar2_queue.get()
                 found_markers.append(marker)
                 rospy.loginfo('Storing Marker %d at: X: %f, Y:, %f', marker[0], marker[1], marker[2])
+                
+            del alvar2_queue
+            del rand_queue
+            del exp_rand
+            del exp_rand_thread
+            del tag_tracker2
+            del tag_tracker2_thread
                 
             return 'explore_fail'
                      
@@ -248,8 +279,10 @@ class wait_state(smach.State):
         
         time.sleep(5)        
         
+        empty = []
+        
         target_queue = Queue.Queue()
-        target_tracker = alvar_tracker.alvar_tracker(target_queue, found_markers, 1)
+        target_tracker = alvar_tracker.alvar_tracker(target_queue, empty, 1)
         target_tracker_thread = myThread("Target Thread", target_tracker._run)
         target_tracker_thread.start()
         
@@ -262,25 +295,37 @@ class wait_state(smach.State):
         kill_thread(target_tracker_thread, target_queue)       
         clear_queue(target_queue)
             
-        rospy.loginfo('Found Markers')    
-        target_tracker._return_markers()
+        rospy.loginfo('Found Marker')    
+        target_tracker._return_last_marker()
         
-        rospy.loginfo('Got Markers')    
-        
-        target_id = target_queue.get()[0]
-        
-        rospy.loginfo('Marker ID is %d', target_id)    
+        target_marker = target_queue.get()
         
         index = 0
         good_target = 0
         
-        while((index < len(found_markers)) and not(good_target)):
-            if(found_markers[index][0] == target_id):
-                good_target = 1
-                target_index = index
-            index = index + 1
+        coord = [target_marker[1], target_marker[2], 0]
+        
+        distance = np.linalg.norm(coord)
+        
+        rospy.loginfo('Marker is %3.3f meters away', distance) 
+        
+        if(distance < 1.5):
+        
+            rospy.loginfo('Marker ID is %d', target_marker[0])    
+            
+            while((index < len(found_markers)) and not(good_target)):
+                if(found_markers[index][0] == target_marker[0]):
+                    good_target = 1
+                    target_index = index
+                index = index + 1
+                    
+            rospy.loginfo('Going to marker %d, index %d', target_marker[0], target_index)  
+        else:
+            rospy.loginfo('Target Marker %d is too far away', target_marker[0])    
                 
-        rospy.loginfo('Going to marker %d, index %d', target_id, target_index)  
+        del target_queue
+        del target_tracker
+        del target_tracker_thread
                 
         if(good_target == 1):
             return 'wait_target_acquired'
@@ -317,6 +362,8 @@ class nav_to_target_state(smach.State):
             status = target_mover._check_goal_status(30)
             rate.sleep()
             
+        del target_mover
+            
         if(status == 1):
             return 'nav_pass'
         else:
@@ -338,7 +385,7 @@ class count_eggs_state(smach.State):
     def image_callback(self, msg):
         global eggs_counted
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")	#convert image
-        print count_eggs(image)	#count the eggs
+        print eggs.count_eggs(image)	#count the eggs
         self.eggs_counted=1	#set flag
         self.image_sb.unregister()	#unsubscribe
         
@@ -363,7 +410,10 @@ class error_state(smach.State):
 
 
 def main():
+    global found_markers
     rospy.init_node("jackal_explore")
+    
+    del found_markers[:] 
 
     # Create a SMACH state machine
     sm = smach.StateMachine(outcomes=['impossibru_outcome'])
@@ -415,6 +465,7 @@ def main():
 
 
 if __name__ == '__main__':
+        
     time.sleep(2)
     main()
 

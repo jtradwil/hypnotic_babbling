@@ -12,7 +12,7 @@ import math
 class alvar_tracker(object):
     run_rate = 20
     seen_markers = []
-    marker_delta = 0.5
+    marker_delta = 0.75
     
     map_frame = "map"
 
@@ -34,7 +34,7 @@ class alvar_tracker(object):
     def _marker_cb(self, data):
         
         for marker in data.markers:
-            if(marker.id > 0):
+            if((marker.id > 0) and (marker.id < 4)):
                 ar_frame = "ar_marker_" + str(marker.id)
                 
                 (success, trans, rot) = self._get_transform(self.map_frame, ar_frame)
@@ -183,8 +183,9 @@ class alvar_tracker(object):
             
             index = index + 1                                      
           
-                                      
-                                      
+    def _return_last_marker(self):
+        self.queue.put(self.seen_markers[len(self.seen_markers)-1])                                 
+                          
                                       
                                       
                                       

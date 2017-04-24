@@ -34,8 +34,8 @@ class explorer(object):
     start_frame = "start_point"
 
     # Run setpoints
-    wall_distance = 0.625
-    max_speed = 0.75
+    wall_distance = 0.5
+    max_speed = 0.25
     
     # Laser Information
     angle_min = 0.0
@@ -151,8 +151,8 @@ class explorer(object):
         
             self._update_cmd(linear, angular)
             self._publish_start_tf(start_trans, start_rot)
-            rospy.loginfo('%d: A: %2.4f  -   D: %2.4f  -   F: %3.2f - V: %d', self.stage, self.angle_min, self.dist_min, self.dist_front, self.laser_valid)
-            rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f  -   D: %3.2f', self.stage, self.set_x, self.set_z, distance)
+            #rospy.loginfo('%d: A: %2.4f  -   D: %2.4f  -   F: %3.2f - V: %d', self.stage, self.angle_min, self.dist_min, self.dist_front, self.laser_valid)
+            #rospy.loginfo('%d: X: %2.4f  -   Z: %2.4f  -   D: %3.2f', self.stage, self.set_x, self.set_z, distance)
             self.rate.sleep()
      
         
