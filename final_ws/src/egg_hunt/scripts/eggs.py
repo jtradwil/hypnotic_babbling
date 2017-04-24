@@ -90,7 +90,7 @@ def crop_width(image):
             egg_w=w
             egg_h=h
     if (egg_h>0):
-        cropped=masked[0:height, egg_x-float(0.2*egg_w):egg_x+egg_w+float(0.2*egg_h)]
+        cropped=masked[0:height, egg_x:egg_x+egg_w]
     else:
 	    cropped=image
 
