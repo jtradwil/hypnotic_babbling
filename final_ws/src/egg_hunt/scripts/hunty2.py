@@ -18,7 +18,7 @@ import alvar_tracker
 import move_to
 import explore_random
 
-expected_bunnies = 4
+expected_bunnies = 3
 possible_bunnies = []
 found_markers = []
 target_index = 0
@@ -112,12 +112,6 @@ class map_state(smach.State):
                 
         kill_thread(tag_tracker_thread, alvar_queue)       
         clear_queue(alvar_queue)
-        tag_tracker._return_markers()
-        
-        while(not(alvar_queue.empty())):
-            marker = alvar_queue.get()
-            found_markers.append(marker)
-            rospy.loginfo('Storing Marker %d at: X: %f, Y:, %f', marker[0], marker[1], marker[2])
             
           
         # Alvar didn't find all nodes so look at map for possible locations  
@@ -128,6 +122,14 @@ class map_state(smach.State):
             while(not(map_queue.empty())):
                 bunny = map_queue.get()
                 possible_bunnies.append(bunny)
+                
+            # Get all markers
+            tag_tracker._return_markers()
+            
+            while(not(alvar_queue.empty())):
+                marker = alvar_queue.get()
+                found_markers.append(marker)
+                rospy.loginfo('Storing Marker %d at: X: %f, Y:, %f', marker[0], marker[1], marker[2])
             
             return 'map_found_none'
             
@@ -137,6 +139,14 @@ class map_state(smach.State):
                 return 'map_found_none'
                 
         else: 
+        
+            tag_tracker._return_altered_markers
+            
+            while(not(alvar_queue.empty())):
+                marker = alvar_queue.get()
+                found_markers.append(marker)
+                rospy.loginfo('Storing Marker %d at: X: %f, Y:, %f', marker[0], marker[1], marker[2])
+        
             return 'map_found_all'
 
 class go_home_state(smach.State):
@@ -173,6 +183,7 @@ class explore_state(smach.State):
         smach.State.__init__(self, outcomes=['explore_pass', 'explore_fail'])
 
     def execute(self, userdata):
+        global found_markers
         rospy.loginfo('Entering explore State')
         
         alvar2_queue = Queue.Queue()
@@ -196,10 +207,34 @@ class explore_state(smach.State):
                 alvar2_finished = 1
                 kill_thread(exp_rand_thread, rand_queue)
                 clear_queue(rand_queue)
+                
+                
+        kill_thread(tag_tracker2_thread, alvar_queue)       
+        clear_queue(alvar2_queue)
+        
+        del found_markers[:] 
         
         if(alvar2_finished == 1):
+        
+            # Get all markers
+            tag_tracker2._return_altered_markers()
+            
+            while(not(alvar2_queue.empty())):
+                marker = alvar2_queue.get()
+                found_markers.append(marker)
+                rospy.loginfo('Storing Marker %d at: X: %f, Y:, %f', marker[0], marker[1], marker[2])
+        
             return 'explore_pass'
+            
         else:
+            # Get all markers
+            tag_tracker2._return_markers()
+            
+            while(not(alvar2_queue.empty())):
+                marker = alvar2_queue.get()
+                found_markers.append(marker)
+                rospy.loginfo('Storing Marker %d at: X: %f, Y:, %f', marker[0], marker[1], marker[2])
+                
             return 'explore_fail'
                      
 class wait_state(smach.State):

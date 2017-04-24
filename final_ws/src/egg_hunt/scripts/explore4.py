@@ -24,7 +24,9 @@ class explorer(object):
     linear_acc  =  1.0 / run_rate
     angular_acc =  20.0 / run_rate
     angle_threshold = 60.0 * 3.14159 / 180.0
+    #bunnie_delta = 0.02
     bunnie_delta = 2.0
+    #bunnie_radius = 0.1333
     bunnie_radius = 6.0
     
     # Frame definitions
