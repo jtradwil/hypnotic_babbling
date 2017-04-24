@@ -132,7 +132,7 @@
       <model name='basket_2'>
         <pose>0 0 0 0 0 0</pose>
         <link name='link'>
-          <pose>-13.837046 2.685017 0.175 0 0 0</pose>
+          <pose>-13.837046 2.385017 0.175 0 0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -142,7 +142,7 @@
       <model name='alvar_tag_3'>
         <pose>0 0 0 0 0 0</pose>
         <link name='link'>
-          <pose>-13.837046 2.685017 0.4135 0 0 0</pose>
+          <pose>-13.837046 2.385017 0.4135 0 0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>

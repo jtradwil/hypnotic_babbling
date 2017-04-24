@@ -16,7 +16,7 @@ class alvar_tracker(object):
     
     map_frame = "map"
 
-    def __init__(self, queue, num_targets):
+    def __init__(self, queue, previous_markers, num_targets):
         self.queue = queue
         self.num_targets = num_targets
         self.tf_lsnr = tf.TransformListener()
@@ -24,6 +24,11 @@ class alvar_tracker(object):
         self.rate = rospy.Rate(self.run_rate)
         
         del self.seen_markers[:] 
+        
+        rospy.loginfo('Populatig %d previous markers', len(previous_markers))
+        
+        for prev in previous_markers:
+            self.seen_markers.append(prev)
         
     
     def _marker_cb(self, data):
@@ -133,6 +138,15 @@ class alvar_tracker(object):
     def _return_markers(self):
         index = 0
         
+        while(index < len(self.seen_markers)):
+        
+            self.queue.put(self.seen_markers[index])
+            
+            index = index + 1
+                                      
+    def _return_altered_markers(self):
+        index = 0
+        
         backoff = 0.675
         
         while(index < len(self.seen_markers)):
@@ -167,11 +181,8 @@ class alvar_tracker(object):
         
             self.queue.put(self.seen_markers[index])
             
-            index = index + 1
-        
-                                      
-                                      
-                                      
+            index = index + 1                                      
+          
                                       
                                       
                                       

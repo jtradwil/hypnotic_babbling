@@ -16,8 +16,9 @@ import eggs
 import explore4
 import alvar_tracker
 import move_to
+import explore_random
 
-
+expected_bunnies = 4
 possible_bunnies = []
 found_markers = []
 target_index = 0
@@ -93,7 +94,7 @@ class map_state(smach.State):
         explorer_thread = myThread("Mapping Thread", explorer._run_wall_follow)
         explorer_thread.start()
         
-        tag_tracker = alvar_tracker.alvar_tracker(alvar_queue, 3)
+        tag_tracker = alvar_tracker.alvar_tracker(alvar_queue, found_markers, expected_bunnies)
         tag_tracker_thread = myThread("Alvar Thread", tag_tracker._run)
         tag_tracker_thread.start()
         
@@ -127,7 +128,9 @@ class map_state(smach.State):
             while(not(map_queue.empty())):
                 bunny = map_queue.get()
                 possible_bunnies.append(bunny)
-                
+            
+            return 'map_found_none'
+            
             if(len(possible_bunnies) > 0):
                 return 'map_found_possible'
             else:
@@ -171,7 +174,33 @@ class explore_state(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo('Entering explore State')
-        return 'explore_pass'
+        
+        alvar2_queue = Queue.Queue()
+        rand_queue = Queue.Queue()
+        
+        # Setup the wall following thread
+        exp_rand = explore_random.explore_random(rand_queue)       
+        exp_rand_thread = myThread("Random Explore Thread", exp_rand._run)
+        exp_rand_thread.start()
+        
+        tag_tracker2 = alvar_tracker.alvar_tracker(alvar2_queue, found_markers, expected_bunnies)
+        tag_tracker2_thread = myThread("Alvar Thread", tag_tracker2._run)
+        tag_tracker2_thread.start()
+        
+        alvar2_finished = 0
+        
+        while(exp_rand_thread.isAlive()) :
+            if(tag_tracker2_thread.isAlive()):
+                pass
+            else:
+                alvar2_finished = 1
+                kill_thread(exp_rand_thread, rand_queue)
+                clear_queue(rand_queue)
+        
+        if(alvar2_finished == 1):
+            return 'explore_pass'
+        else:
+            return 'explore_fail'
                      
 class wait_state(smach.State):
     def __init__(self):
@@ -185,7 +214,7 @@ class wait_state(smach.State):
         time.sleep(5)        
         
         target_queue = Queue.Queue()
-        target_tracker = alvar_tracker.alvar_tracker(target_queue, 1)
+        target_tracker = alvar_tracker.alvar_tracker(target_queue, found_markers, 1)
         target_tracker_thread = myThread("Target Thread", target_tracker._run)
         target_tracker_thread.start()
         
@@ -351,7 +380,7 @@ def main():
 
 
 if __name__ == '__main__':
-    time.sleep(10)
+    time.sleep(2)
     main()
 
 

@@ -32,8 +32,8 @@ class explorer(object):
     start_frame = "start_point"
 
     # Run setpoints
-    wall_distance = 0.5
-    max_speed = 0.25
+    wall_distance = 0.625
+    max_speed = 0.75
     
     # Laser Information
     angle_min = 0.0
@@ -171,7 +171,7 @@ class explorer(object):
             self.angle_min = (minIndex - size/2) * data.angle_increment
             self.dist_min = data.ranges[minIndex]
             #self.dist_front = data.ranges[size/2]
-            self.dist_front = self._get_min((size/2) - 10, (size/2) + 10, data)
+            self.dist_front = self._get_min((size/2) - 60, (size/2) + 60, data)
         
             if(math.isnan(self.angle_min) or math.isnan(self.dist_min) or math.isnan(self.dist_front)):
                 self.laser_valid = 0
