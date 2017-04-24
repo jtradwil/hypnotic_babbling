@@ -104,7 +104,7 @@ class explore_random(object):
             count=count+1
         if (count<width*height/10):
             self.pos_x.append(temp_x*resolution+origin[0])
-            self.pos_y.append(temp_y*resolution+origin[1])
+            self.pos_y.append((height-temp_y)*resolution+origin[1])
         count = 0    
 
         #find a point in the second quadrant
@@ -116,7 +116,7 @@ class explore_random(object):
             count=count+1
         if (count<width*height/10):
             self.pos_x.append(temp_x*resolution+origin[0])
-            self.pos_y.append(temp_y*resolution+origin[1])
+            self.pos_y.append((height-temp_y)*resolution+origin[1])
         count = 0 
 
         #find a point in the third quadrant
@@ -128,7 +128,7 @@ class explore_random(object):
             count=count+1
         if (count<width*height/10):
             self.pos_x.append(temp_x*resolution+origin[0])
-            self.pos_y.append(temp_y*resolution+origin[1])
+            self.pos_y.append((height-temp_y)*resolution+origin[1])
         count = 0 
 
         #find a point in the fourth quadrant
@@ -140,7 +140,7 @@ class explore_random(object):
             count=count+1
         if (count<width*height/10):
             self.pos_x.append(temp_x*resolution+origin[0])
-            self.pos_y.append(temp_y*resolution+origin[1])
+            self.pos_y.append((height-temp_y)*resolution+origin[1])
         count = 0 	
 
 
