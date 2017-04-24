@@ -303,7 +303,7 @@ class count_eggs_state(smach.State):
     def image_callback(self, msg):
         global eggs_counted
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")	#convert image
-        print eggs.find(eggs.crop_height(image),eggs.avg_size(eggs.crop_height(image)))	#count the eggs
+        print count_eggs(image)	#count the eggs
         self.eggs_counted=1	#set flag
         self.image_sb.unregister()	#unsubscribe
         
