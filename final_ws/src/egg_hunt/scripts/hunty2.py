@@ -72,6 +72,8 @@ class init_state(smach.State):
         #Start Jackal Description launchfile
         #Start Jackal Nodes launchfile
         rospy.loginfo('Entering init State')
+        rospy.set_param('rabbit_id', '0')
+        rospy.set_param('colors', [0,0,0,0,0,0])
         return 'init_pass'
 
 class map_state(smach.State):
@@ -300,6 +302,9 @@ class wait_state(smach.State):
         
         target_marker = target_queue.get()
         
+        rospy.set_param('rabbit_id', target_marker)
+        rospy.set_param('colors', [0,0,0,0,0,0])
+        
         index = 0
         good_target = 0
         
@@ -386,6 +391,7 @@ class count_eggs_state(smach.State):
         global eggs_counted
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")	#convert image
         print eggs.count_eggs(image)	#count the eggs
+        rospy.set_param('colors', eggs.count_eggs(image))
         self.eggs_counted=1	#set flag
         self.image_sb.unregister()	#unsubscribe
         
