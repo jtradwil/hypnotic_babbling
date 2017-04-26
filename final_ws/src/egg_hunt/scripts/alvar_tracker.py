@@ -37,8 +37,8 @@ class alvar_tracker(object):
             if((marker.id > 0) and (marker.id < 4)):
                 ar_frame = "ar_marker_" + str(marker.id)
                 
-                (success, trans, rot) = self._get_transform(self.map_frame, ar_frame)
-                (r_success, r_trans, r_rot) = self._get_transform("base_link", ar_frame)
+                (success, trans, rot) = self._get_transform(self.map_frame, ar_frame, 2.0)
+                (r_success, r_trans, r_rot) = self._get_transform("base_link", ar_frame, 2.0)
                 
                 if((success == 1) and (r_success == 1)):
                     distance = np.linalg.norm(r_trans)
@@ -80,7 +80,7 @@ class alvar_tracker(object):
         run = 1
         
         while not(rospy.is_shutdown()) and (run == 1):
-            if(len(self.seen_markers) >= self.num_targets):
+            if((len(self.seen_markers) >= self.num_targets) and (self.num_targets > 0)):
                 run = 0
                 self.queue.put("DONE")
                 
@@ -94,44 +94,32 @@ class alvar_tracker(object):
         self.ar_map_sb.unregister()
         
     # Get translation and rotation from source frame to target_frame
-    def _get_transform(self, source_frame, target_frame):         
+    def _get_transform(self, source_frame, target_frame, timeout):         
         trans = np.zeros(3)
         rot = np.zeros(4)
         
         success = -1
          
         if self.tf_lsnr.frameExists(source_frame) and self.tf_lsnr.frameExists(target_frame):
+            now = rospy.Time(0)
+        
             try:
-                now = rospy.Time(0)
-                self.tf_lsnr.waitForTransform(source_frame, target_frame, now, rospy.Duration(1.0))
+                self.tf_lsnr.waitForTransform(source_frame, target_frame, now, rospy.Duration(timeout))
                 trans, rot  = self.tf_lsnr.lookupTransform(source_frame, target_frame, now)
                 
                 success = 1
                 
-            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                #except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            except:
                 pass
                 
         return (success, trans, rot)
         
     def _publish_alvar_tfs(self):
         for prev in self.seen_markers:
-            ar_frame = "usr_ar_marker_" + str(prev[0])
+            ar_frame = "usr_ar_marker_" + str(prev[0])        
             
-            backoff = 0.675
-            
-            quaternion = (prev[4], prev[5], prev[6], prev[7])
-            
-            euler = tf.transformations.euler_from_quaternion(quaternion)
-            
-            yaw = euler[2] + math.pi/2
-            
-            x_bck = backoff * math.cos(yaw)
-            y_bck = backoff * math.sin(yaw)
-            
-            new_x = prev[1] - x_bck
-            new_y = prev[2] - y_bck            
-            
-            self.start_bcst.sendTransform( (new_x, new_y, prev[3]),
+            self.start_bcst.sendTransform( (prev[1], prev[2], prev[3]),
                                            (prev[4], prev[5], prev[6], prev[7]),
                                            rospy.Time.now(), ar_frame, self.map_frame)
                                            
@@ -143,8 +131,34 @@ class alvar_tracker(object):
             self.queue.put(self.seen_markers[index])
             
             index = index + 1
+            
+    def _return_marker_id(self, mkr_id):
+        index = 0
+        good_id = 0
+        id_index = 0
+    
+        while(index < len(self.seen_markers)):
+            if(self.seen_markers[index] == mkr_id):
+                good_id = good_id + 1
+                id_index = index
+            
+            index = index + 1
+            
+        # No Markers Found
+        if(good_id == 0):
+            return 0
+            
+        # More than 1 valid marker with id
+        elif(good_id > 1):
+            return -1
+            
+        # 1 Match Found
+        else:
+            self.queue.put(self.seen_markers[id_index])
+            return 1
+        
                                       
-    def _return_altered_markers(self):
+    def _return_altered_markers(self, backoff):
         index = 0
         
         backoff = 0.675

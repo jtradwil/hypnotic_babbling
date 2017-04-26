@@ -213,7 +213,6 @@ class explorer(object):
         self.cmd_pub.publish(publish_msg)
 
 
-    # Update the PID
     def _update_pid(self, angle_min, dist_min, dist_front):
         global e_p, e_i, e_d
         
@@ -240,9 +239,11 @@ class explorer(object):
         
         if(self.dist_min < (self.wall_distance-0.25)):
             cmd_linear = 0
+            cmd_angular = -0.25
             
         elif(self.dist_front < self.wall_distance):
             cmd_linear = 0
+            cmd_angular = -0.25
             
         elif(math.fabs(self.angle_min) < self.angle_threshold):
             cmd_linear = 0.25 * self.max_speed

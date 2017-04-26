@@ -110,11 +110,9 @@ class map_state(smach.State):
                 alvar_finished = 1
                 kill_thread(explorer_thread, map_queue)
                 clear_queue(map_queue)
-                
-                
+                    
         kill_thread(tag_tracker_thread, alvar_queue)       
         clear_queue(alvar_queue)
-            
           
         # Alvar didn't find all nodes so look at map for possible locations  
         if(alvar_finished == 0):
@@ -150,7 +148,7 @@ class map_state(smach.State):
                 
         else: 
         
-            tag_tracker._return_altered_markers
+            tag_tracker._return_markers()
             
             while(not(alvar_queue.empty())):
                 marker = alvar_queue.get()
@@ -236,7 +234,7 @@ class explore_state(smach.State):
         if(alvar2_finished == 1):
         
             # Get all markers
-            tag_tracker2._return_altered_markers()
+            tag_tracker2._return_markers()
             
             while(not(alvar2_queue.empty())):
                 marker = alvar2_queue.get()
@@ -278,8 +276,8 @@ class wait_state(smach.State):
         global target_index
         rospy.loginfo('Entering wait State')
         
+        time.sleep(5)       
         
-        time.sleep(5)        
         
         empty = []
         
@@ -287,7 +285,6 @@ class wait_state(smach.State):
         target_tracker = alvar_tracker.alvar_tracker(target_queue, empty, 1)
         target_tracker_thread = myThread("Target Thread", target_tracker._run)
         target_tracker_thread.start()
-        
         
         rospy.loginfo('Waiting for marker')
         
@@ -302,7 +299,7 @@ class wait_state(smach.State):
         
         target_marker = target_queue.get()
         
-        rospy.set_param('rabbit_id', target_marker)
+        rospy.set_param('rabbit_id', target_marker[0])
         rospy.set_param('colors', [0,0,0,0,0,0])
         
         index = 0
@@ -345,28 +342,91 @@ class nav_to_target_state(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Entering nav State')
         
-        time.sleep(5)  
+        rate = rospy.Rate(10)
+        time.sleep(2)  
         
+        empty = []
+        status = 0
+        found_marker = 0
+        offset = 0.875
+        
+        # Alvar Tracker for the target
+        target2_queue = Queue.Queue()
+        target_tracker2 = alvar_tracker.alvar_tracker(target2_queue, empty, -1)
+        ar_frame = "ar_marker_" + str(found_markers[target_index][0])
+        
+        # Target pose and mover
         tar_x = found_markers[target_index][1]
         tar_y = found_markers[target_index][2]
         tar_rx = found_markers[target_index][4]
         tar_ry = found_markers[target_index][5]
         tar_rz = found_markers[target_index][6]
         tar_rw = found_markers[target_index][7]
-        
         target_mover = move_to.move_to()
+        target_mover._move_to_pose_backoff(tar_x, tar_y, tar_rx, tar_ry, tar_rz, tar_rw, offset)
         
-        target_mover._move_to_pose(tar_x, tar_y, tar_rx, tar_ry, tar_rz, tar_rw)
+        # Wait until we find the alvar marker again
+        while((status < 1) and (found_marker == 0)):
+            (success, trans, rot) = target_tracker2._get_transform("base_link", ar_frame, 2.0)
         
-        status = 0
-        
-        rate = rospy.Rate(10)
-        
-        while(status == 0):
-            self._publish_tf(found_markers[target_index])
+            if(success == 1):
+                coord = [trans[0], trans[1], 0]
+                
+                distance = np.linalg.norm(coord)
+                
+                rospy.loginfo('Founds Marker %3.3f away', distance)
+                
+                if(distance < 1.5):
+                    target_mover._cancel_goal()
+                    
+                    offset = 1.25
+                    
+                    time.sleep(3)  
+                    
+                    (success, trans, rot) = target_tracker2._get_transform("map", ar_frame, 2.0)
+                    
+                    if(success == 1):
+                        dx = found_markers[target_index][1] - trans[0]
+                        dy = found_markers[target_index][2] - trans[1]
+                        
+                        coord = [dx, dy, 0]
+                        
+                        distance = np.linalg.norm(coord)
+                        
+                        rospy.loginfo('Founds Marker %3.3f away', distance)
+                        
+                        if(distance < 0.5):
+                            found_marker = 1
+                        
+                            target_mover._cancel_goal()
+                            
+                            tar_x = trans[0]
+                            tar_y = trans[1]
+                            tar_rx = rot[0]
+                            tar_ry = rot[1]
+                            tar_rz = rot[2]
+                            tar_rw = rot[3]
+                            
+                            offset = 0.75
+                        
+                    target_mover._move_to_pose_backoff(tar_x, tar_y, tar_rx, tar_ry, tar_rz, tar_rw, offset)
+                    time.sleep(1)
+                
             status = target_mover._check_goal_status(30)
+            
+            if(status < 0):
+                target_mover._move_to_pose_backoff(tar_x, tar_y, tar_rx, tar_ry, tar_rz, tar_rw, offset)
+            
             rate.sleep()
             
+        rospy.loginfo('Going to final marker')
+            
+        while(status < 1):
+            status = target_mover._check_goal_status(30)
+            if(status < 0):
+                target_mover._move_to_pose_backoff(tar_x, tar_y, tar_rx, tar_ry, tar_rz, tar_rw, 0.75)
+            rate.sleep()
+               
         del target_mover
             
         if(status == 1):

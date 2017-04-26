@@ -6,7 +6,7 @@
   </include>
   
   <include file="$(find ee5900_jackal_gazebo)/launch/spawn.launch">
-    <arg name="spawn_x" value="0" />
+    <arg name="spawn_x" value="10" />
     <arg name="spawn_y" value="0" />
     <arg name="spawn_z" value="0" />
     <arg name="spawn_roll" value="0" />
